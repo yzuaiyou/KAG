@@ -53,61 +53,65 @@ class BuildExamplePipeline:
             # file_path = convert_finqa_to_md_file(item)
             # with open(file_path, "r", encoding="utf-8") as file:
             #     file_content = file.read()
-            _id = item["id"]
-            question = item["qa"]["question"]
-            info = ""
-            for k, v in item["qa"]["gold_inds"].items():
-                if len(info) > 0:
-                    info += "\n"
-                info += f"{k}: {v}"
-            # info = str(file_content)
-            process = str(item["qa"]["program_re"])
-            # answer = str(item["qa"]["answer"])
-            params = {
-                "question": question,
-                "info": info,
-                "process": process,
-            }
-            logging.info("#" * 100)
-            logging.info("start,index=%d", i)
-            while True:
-                tags, correct, formula = self.llm_client.invoke(
-                    variables=params,
-                    prompt_op=self.build_example_prompt,
-                    with_json_parse=False,
-                    with_except=True,
-                    with_cache=False,
-                )
-                if tags is None or correct is None or formula is None:
-                    logging.error(f"index={i},tags={tags},correct={correct},formula={formula}")
-                    continue
-                break
-            doc = question + " tags=" + str(tags)
-            logging.info(
-                "index=%d,id=%s\ncorrect=%s\ndoc=%s\nformula=%s",
-                i,
-                _id,
-                correct,
-                doc,
-                formula,
-            )
-            if "yes" != correct.lower():
-                continue
-            self.collection.upsert(
-                documents=[
+            try:
+                _id = item["id"]
+                question = item["qa"]["question"]
+                info = ""
+                for k, v in item["qa"]["gold_inds"].items():
+                    if len(info) > 0:
+                        info += "\n"
+                    info += f"{k}: {v}"
+                # info = str(file_content)
+                process = str(item["qa"]["program_re"])
+                # answer = str(item["qa"]["answer"])
+                params = {
+                    "question": question,
+                    "info": info,
+                    "process": process,
+                }
+                logging.info("#" * 100)
+                logging.info("start,index=%d", i)
+                while True:
+                    tags, correct, formula = self.llm_client.invoke(
+                        variables=params,
+                        prompt_op=self.build_example_prompt,
+                        with_json_parse=False,
+                        with_except=True,
+                        with_cache=False,
+                    )
+                    if tags is None or correct is None or formula is None:
+                        logging.error(f"index={i},tags={tags},correct={correct},formula={formula}")
+                        continue
+                    break
+                doc = question + " tags=" + str(tags)
+                logging.info(
+                    "index=%d,id=%s\ncorrect=%s\ndoc=%s\nformula=%s",
+                    i,
+                    _id,
+                    correct,
                     doc,
-                ],
-                metadatas=[
-                    {
-                        "formula": formula,
-                        "gold_inds": json.dumps(
-                            item["qa"]["gold_inds"], ensure_ascii=False, sort_keys=True
-                        ),
-                        "question": question,
-                    }
-                ],
-                ids=[_id],
-            )
+                    formula,
+                )
+                if "yes" != correct.lower():
+                    continue
+                self.collection.upsert(
+                    documents=[
+                        doc,
+                    ],
+                    metadatas=[
+                        {
+                            "formula": formula,
+                            "gold_inds": json.dumps(
+                                item["qa"]["gold_inds"], ensure_ascii=False, sort_keys=True
+                            ),
+                            "question": question,
+                        }
+                    ],
+                    ids=[_id],
+                )
+            except:
+                logging.exception("error")
+                continue
 
     def load_finqa_train_data(self, _type="train") -> list:
         """
@@ -136,7 +140,7 @@ class BuildExamplePipeline:
 
 if __name__ == "__main__":
     resp = BuildExamplePipeline()
-    resp.build(2209)
+    resp.build(2821)
     # examples, docs = resp.search_example(
     #     "what is the total of home equity lines of credit, tags=['Total Sum']"
     # )
