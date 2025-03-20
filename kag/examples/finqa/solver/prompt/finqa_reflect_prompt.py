@@ -21,16 +21,17 @@ logger = logging.getLogger(__name__)
 class FinQAReflectQuestion(PromptABC):
     template_zh = """
 # 任务
-根据给出的信息改写问题。
+根据给出的信息改写问题，使得问题可以被解答。
 
 # 提示
 根据以下几种情况改写问题：
-1. 问题中给出的时间与内容不符，修改问题中的时间。
-2. 注意一些公司的财年从年中开始，涉及这种情况修改问题中时间来适配财年时间。
-3. 注意12月31日，即为下一年的开始，涉及这种情况的，修改问题中时间，以适配信息中的时间。
+1. 问题中给出的时间在内容中完全找不到，可以根据内容修改问题中的时间。
+2. 注意财年类问题，时间涉及4月，7月，10月的问题，可能修改为对应的财年。
+3. during 2003和from 2003 to 2003，可以修改为from 2002 to 2003。
 
-# 返回
+# 输出格式
 先输出你的思考过程，最后返回`New question: <new_question>`。
+我将在你回答中提取新问题，务必注意返回格式。
 
 # 输入
 ## 问题
@@ -43,16 +44,17 @@ $info
 
     template_en = """
 # Task
-Rewrite the question based on the provided information.
+Rewrite the question based on the provided information so that it can be answered.
 
 # Instructions
 Rewrite the question according to the following scenarios:
-1. If the time mentioned in the question does not match the content, adjust the time in the question.
-2. Be aware that some companies have fiscal years starting mid-year; for such cases, modify the time in the question to align with the fiscal year.
-3. Note that December 31st is effectively the start of the next year; in such cases, adjust the time in the question to match the provided information.
+1. If the time mentioned in the question cannot be found in the content at all, the time in the question can be modified based on the content.
+2. Pay attention to fiscal year-related questions where the time involves April, July, or October; it may be revised to correspond to the relevant fiscal year.
+3. For phrases like "during 2003" or "from 2003 to 2003," these can be modified to "from 2002 to 2003."
 
 # Expected Output
 First, provide your thought process, and then return `New question: <new_question>`.
+I will extract the new question from your response, so be sure to follow the return format.
 
 # Input
 ## Question
@@ -69,7 +71,10 @@ $info
 
     def parse_response(self, response: str, **kwargs):
         logger.debug("推理器判别:{}".format(response))
-        answer_flag = "New question:"
-        index = response.rfind(answer_flag)
-        response = response[index + len(answer_flag) :].strip(" *\n")
+        answer_flag = "new question:"
+        index = response.lower().rfind(answer_flag)
+        if index < 0:
+            response = response.splitlines()[-1].strip(" *\n")
+        else:
+            response = response[index + len(answer_flag) :].strip(" *\n")
         return response

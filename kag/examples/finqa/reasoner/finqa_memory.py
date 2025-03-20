@@ -8,6 +8,12 @@ from kag.interface.solver.base_model import LFExecuteResult
 from kag.solver.utils import init_prompt_with_fallback
 
 logger = logging.getLogger()
+from kag.examples.finqa.reasoner.common import (
+    get_history_context_info_list,
+    get_history_context_str,
+    get_all_recall_docs,
+    get_execute_context,
+)
 
 
 @KagMemoryABC.register("finqa_memory", as_default=True)
@@ -24,6 +30,7 @@ class FinQAMemory(KagMemoryABC):
         self.exact_answer = []
         self.instruction_set = []
         self.lf_res = []
+        self.row_instruction = None
 
     def save_memory(
         self, solved_answer, supporting_fact, instruction, lf_res: LFExecuteResult
@@ -33,18 +40,21 @@ class FinQAMemory(KagMemoryABC):
             return
         self.evidence_memory.append(supporting_fact)
         self.instruction_set.append(instruction)
+        if self.row_instruction is None:
+            self.row_instruction = instruction
         self.lf_res = lf_res
 
     def get_solved_answer(self):
         return self.exact_answer[-1] if len(self.exact_answer) > 0 else None
 
     def serialize_memory(self):
-        if len(self.exact_answer) > 0:
-            return f"[Solved Answer]{self.exact_answer[-1]}"
-        serialize_memory = "[Evidence Memory]:{}\n".format(
-            "\n".join(self.evidence_memory)
+        context_list = get_execute_context(
+            question=self.row_instruction,
+            execute_rst_list=self.lf_res.execute_rst_list,
+            with_code=False,
         )
-        return serialize_memory
+        context_str = get_history_context_str(context_list=context_list)
+        return context_str
 
     def refresh(self):
         self.state_memory = []

@@ -24,9 +24,9 @@ from kag.examples.finqa.solver.prompt.expression_builder import FinQAExpressionB
 from kag.examples.finqa.solver.prompt.solve_question_without_spo import (
     SolveQuestionWithOutSPO,
 )
-from kag.examples.finqa.solver.prompt.rerank_chunks import TableRerankChunksPrompt
+from kag.examples.finqa.solver.prompt.rerank_chunks import TableRerankChunksPrompt2
 from kag.examples.finqa.solver.prompt.question_classify import FinQAQuestionClassify
-from kag.examples.finqa.solver.prompt.finq_reflect_prompt import FinQAReflectQuestion
+from kag.examples.finqa.solver.prompt.finqa_reflect_prompt import FinQAReflectQuestion
 from kag.examples.finqa.solver.prompt.math_select_prompt import MathSelectPrompt
 
 from kag.examples.finqa.reasoner.finqa_solver_pipeline import FinQASolverPipeline
@@ -38,7 +38,7 @@ def qa(question, _i, _id):
     )
     answer, traceLog = resp.run(question)
     try:
-        print(json.dumps(traceLog, ensure_ascii=False))
+        #print(json.dumps(traceLog, ensure_ascii=False))
         code = ""
         question = ""
         memory = ""
@@ -172,7 +172,7 @@ if __name__ == "__main__":
         "answer_similarity": 0.0,
         "processNum": 0,
     }
-    debug_index = [5, 12, 525, 528, 17, 18, 531, 534, 28, 29, 540, 34, 35, 548, 47, 51, 53, 56, 570, 59, 573, 64, 66, 579, 68, 70, 75, 590, 79, 80, 594, 84, 87, 601, 602, 94, 95, 609, 98, 100, 615, 103, 108, 109, 114, 627, 118, 631, 120, 122, 124, 636, 129, 642, 130, 641, 652, 655, 144, 658, 150, 152, 666, 157, 670, 672, 160, 677, 678, 170, 686, 687, 174, 690, 178, 183, 185, 186, 187, 190, 706, 708, 713, 203, 204, 210, 722, 726, 217, 730, 729, 222, 736, 231, 745, 234, 748, 750, 238, 760, 761, 762, 252, 767, 768, 260, 263, 265, 268, 270, 278, 281, 283, 285, 290, 298, 310, 313, 316, 317, 324, 328, 329, 339, 341, 343, 348, 356, 360, 361, 369, 372, 380, 381, 384, 385, 389, 398, 399, 401, 402, 403, 408, 412, 414, 427, 429, 430, 432, 441, 442, 443, 446, 455, 459, 460, 461, 462, 472, 485, 494, 496, 500, 502, 503, 504, 507, 508]
+    debug_index = None
     error_question_map = {"error": [], "no_answer": [], "system_error": []}
     for file_name, _item_list in _finqa_file_to_qa_map.items():
         if debug_index is not None:

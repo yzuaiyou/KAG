@@ -19,39 +19,53 @@ logger = logging.getLogger(__name__)
 
 @PromptABC.register("table_resp_judge")
 class FinQARespJudge(PromptABC):
-    template_zh = (
-        "根据当前已知信息进行判断，不允许进行推理，"
-        "你能否完全并准确地回答这个问题'$instruction'?\n已知信息：'$memory'。"
-        "\n如果你能，请直接回复‘是’\n如果不能且需要更多信息，请直接回复‘否’。"
-    )
-    template_en = (
-        "Judging based solely on the current known information and without allowing for inference, "
-        "are you able to completely and accurately respond to the question '$instruction'? "
-        "\nKnown information: '$memory'. "
-        "\nIf you can, please reply with 'Yes' directly; "
-        "if you cannot and need more information, please reply with 'No' directly."
-    )
+    template_zh = """
+# 任务
+你是金融领域专家，针对给出的问题，和解答过程，判断答案是否正确。
+你需要判断python代码中的计算过程是否正确，特别需要注意计算中使用的数值是否与问题相匹配。
+你的判断标准要尽可能严格。
+
+# 输出格式
+输出你的思考过程，并在最后一行输出
+`The process of answering this question is correct`
+或
+`The process of answering this question is incorrect`
+
+# 问题
+$instruction
+
+# 解答过程
+$memory
+""".strip()
+
+    template_en = """
+# Task
+You are an expert in the financial domain. For the given problem and the solution process, determine whether the answer is correct.
+You need to evaluate whether the calculation process in the Python code is accurate, paying particular attention to whether the values used in the computation match the problem's requirements.
+Your judgment criteria should be as strict as possible.
+
+# Output Format
+Provide your reasoning process, and on the last line, state:
+`The process of answering this question is correct`
+or
+`The process of answering this question is incorrect`
+
+# Question
+$instruction
+
+# Answering Process
+$memory
+"""
 
     @property
     def template_variables(self) -> List[str]:
         return ["memory", "instruction"]
 
-    def parse_response_en(self, satisfied_info: str):
-        if satisfied_info[:3] == "Yes":
-            if_finished = True
-        else:
-            if_finished = False
-        return if_finished
-
-    def parse_response_zh(self, satisfied_info: str):
-        if satisfied_info.startswith("是"):
-            if_finished = True
-        else:
-            if_finished = False
-        return if_finished
-
     def parse_response(self, response: str, **kwargs):
         logger.debug("推理器判别:{}".format(response))
-        if self.language == "en":
-            return self.parse_response_en(response)
-        return self.parse_response_zh(response)
+        if (
+            "The process of answering this question is correct".lower()
+            in response.lower()
+        ):
+            return True
+        return False

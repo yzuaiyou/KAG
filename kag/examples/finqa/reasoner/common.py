@@ -21,7 +21,9 @@ def get_all_recall_docs(execute_rst_list: list[LFExecuteResult], rerank_doc=True
     return _norm_doc_retrieved(_recall_docs)
 
 
-def get_execute_context(question, execute_rst_list: list[LFExecuteResult]) -> list:
+def get_execute_context(
+    question, execute_rst_list: list[LFExecuteResult], with_code: bool = False
+) -> list:
     context_list = []
     if len(execute_rst_list) <= 0:
         return context_list
@@ -30,7 +32,7 @@ def get_execute_context(question, execute_rst_list: list[LFExecuteResult]) -> li
     sub_qa_map = {}
     docs_map = {}
     doc_index = 0
-    for i, exe_info in enumerate(execute_rst_list):
+    for _, exe_info in enumerate(execute_rst_list):
         exe_info: LFExecuteResult = exe_info
         docs = exe_info.rerank_docs
         docs = _norm_doc_retrieved(docs)
@@ -39,11 +41,8 @@ def get_execute_context(question, execute_rst_list: list[LFExecuteResult]) -> li
                 doc_index += 1
                 docs_map[doc] = doc_index
 
-        if 0 == i:
-            sub_qa_map[question] = docs
-        else:
-            lf_plan: LFPlan = exe_info.sub_plans[0]
-            sub_qa_map[lf_plan.query] = docs
+        query = "\n".join([lf_plan.query for lf_plan in exe_info.sub_plans])
+        sub_qa_map[query] = docs
 
     if len(sub_qa_map) <= 0:
         context_list.append((question, "retrival", None, None))
@@ -75,9 +74,10 @@ def get_execute_context(question, execute_rst_list: list[LFExecuteResult]) -> li
             lf_plan: LFPlan = lf_plan
             if lf_plan.sub_query_type != "math":
                 continue
-            answer = (
-                f"The result calculated by the calculator is: {lf_plan.res.sub_answer}"
-            )
+            answer = f"The result calculated by the Python is: {lf_plan.res.sub_answer}"
+            if with_code:
+                python_code = lf_plan.res.debug_info["code"]
+                answer = f"Python code is:\n```python{python_code}```\nExecution result:{lf_plan.res.sub_answer}"
             context_list.append(
                 (lf_plan.query, lf_plan.sub_query_type, answer, lf_plan.res.debug_info)
             )

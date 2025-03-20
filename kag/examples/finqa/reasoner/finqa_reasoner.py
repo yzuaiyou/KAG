@@ -104,7 +104,7 @@ class FinQAReasoner(KagReasonerABC):
             "question_classify", self.biz_scene
         )
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        chromadb_path = os.path.join(current_dir, "..", "dyna_shot", "chromadb")
+        chromadb_path = os.path.join(current_dir, "..", "dyna_shot", "chromadb_v2")
         self.chroma_client = chromadb.PersistentClient(path=chromadb_path)
         self.collection = self.chroma_client.create_collection(
             name="finqa_example", get_or_create=True
@@ -126,14 +126,15 @@ class FinQAReasoner(KagReasonerABC):
         rsts = self.collection.query(query_texts=[doc], n_results=topn)
         examples = []
         for meta in rsts["metadatas"][0]:
-            examples.append(meta["example"])
+            example = f"Question:{meta['question']}\nFormula:{meta['formula']}"
+            examples.append(example)
+            # examples.append(meta["example"])
         return examples
 
     def reason(
         self,
         question: str,
         memory: KagMemoryABC = None,
-        use_raw_query: bool = False,
         **kwargs,
     ):
         tags = self.question_classify(question=question)
@@ -151,8 +152,14 @@ class FinQAReasoner(KagReasonerABC):
             step_index += 1
             if step_index >= 10:
                 break
-            if 0 == step_index and use_raw_query:
+            if 1 == step_index and not get_all_recall_docs(
+                execute_rst_list=execute_rst_list
+            ):
                 lf_nodes = self._create_lf_node(question=question, _type="retrieval")
+            elif step_index > 3 and not get_all_recall_docs(
+                execute_rst_list=execute_rst_list
+            ):
+                break
             else:
                 # logic form planing
                 lf_nodes: List[LFPlan] = self.lf_planner.lf_planing(
@@ -164,7 +171,9 @@ class FinQAReasoner(KagReasonerABC):
                 execute_rst_list=execute_rst_list, lf_nodes=lf_nodes
             )
             if lf_nodes is None or len(lf_nodes) <= 0:
-                if not self._check_have_math_op(execute_rst_list=execute_rst_list):
+                if not self._check_have_recall_docs(execute_rst_list=execute_rst_list):
+                    break
+                elif not self._check_have_math_op(execute_rst_list=execute_rst_list):
                     lf_nodes = self._create_lf_node(question=question, _type="math")
                 else:
                     break
@@ -182,9 +191,6 @@ class FinQAReasoner(KagReasonerABC):
                 execute_rst_list=execute_rst_list,
                 process_info=process_info,
             )
-            # 如果所有node都没有结果
-            if not get_all_recall_docs(execute_rst_list=execute_rst_list):
-                break
 
         reason_res: LFExecuteResult = FinQALFExecuteResult(
             question=question, execute_rst_list=execute_rst_list
@@ -209,6 +215,12 @@ class FinQAReasoner(KagReasonerABC):
         for c in context_list:
             process_info["sub_qa_pair"].append((c[0], c[2]))
         return process_info
+
+    def _check_have_recall_docs(self, execute_rst_list):
+        docs = get_all_recall_docs(execute_rst_list=execute_rst_list, rerank_doc=True)
+        if len(docs) <= 0:
+            return False
+        return True
 
     def _check_have_math_op(self, execute_rst_list):
         have_math_op = False

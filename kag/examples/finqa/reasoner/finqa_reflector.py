@@ -1,3 +1,5 @@
+import logging
+
 from tenacity import retry, stop_after_attempt
 
 from kag.interface import PromptABC
@@ -19,6 +21,7 @@ from kag.examples.finqa.reasoner.common import (
     get_execute_context,
 )
 
+logger = logging.getLogger()
 
 @KagReflectorABC.register("finqa_reflector", as_default=True)
 class FinQAReflector(KagReflectorABC):
@@ -75,28 +78,31 @@ class FinQAReflector(KagReflectorABC):
         if not has_math:
             return False
 
-        serialize_memory = self._get_serialize_memory(memory)
-        if serialize_memory == "":
-            return False
 
-        if memory.get_solved_answer():
-            return True
+        context_list = get_execute_context(
+            question=instruction, execute_rst_list=memory.lf_res.execute_rst_list, with_code=True
+        )
+        context_str = get_history_context_str(context_list=context_list)
+        serialize_memory = context_str
 
-        return self.llm_module.invoke(
+        rst = self.llm_module.invoke(
             {"memory": serialize_memory, "instruction": instruction},
             self.judge_prompt,
             with_json_parse=False,
             with_except=True,
         )
+        logger.info("finqa_reflector:can_answer=%s\nquestion=%s\nmemory=%s", str(rst), instruction, serialize_memory)
+        return rst
 
     @retry(stop=stop_after_attempt(3))
     def _refine_query(self, memory: KagMemoryABC, instruction: str):
-
         memory: FinQAMemory = memory
         recall_docs = get_all_recall_docs(memory.lf_res.execute_rst_list)
         if len(recall_docs) <= 0:
             # 无数据召回
-            info_str = str(get_all_recall_docs(memory.lf_res.execute_rst_list, False))
+            docs = get_all_recall_docs(memory.lf_res.execute_rst_list, False)
+            docs = sorted(list(set(docs)))
+            info_str = "\n".join(docs).strip()
             new_instruction = self.llm_module.invoke(
                 variables={"question": instruction, "info": info_str},
                 prompt_op=self.refine_prompt,
@@ -104,18 +110,8 @@ class FinQAReflector(KagReflectorABC):
                 with_except=False,
             )
             if new_instruction is not None:
+                logger.info("finqa_reflector:change old query[%s] to [%s]", instruction, new_instruction)
                 return new_instruction
             return instruction
-
-        has_math = False
-        for _, exe_info in enumerate(memory.lf_res.execute_rst_list):
-            exe_info: LFExecuteResult = exe_info
-            for _, lf_plan in enumerate(exe_info.sub_plans):
-                lf_plan: LFPlan = lf_plan
-                if lf_plan.sub_query_type == "math":
-                    has_math = True
-                    break
-        if not has_math:
-            return instruction + " (must use math operator)"
 
         return instruction
