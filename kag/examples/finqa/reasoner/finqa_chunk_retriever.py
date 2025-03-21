@@ -101,7 +101,7 @@ class FinQAChunkRetriever(KAGRetriever):
         query_txt = "\n".join(queries)
         rsts = self.collection.query(
             query_texts=[query_txt],
-            n_results=10,
+            n_results=20,
             where={"file_name": f"{file_name}_{chunk_len}"},
         )
         rst = sorted(rsts["documents"][0])

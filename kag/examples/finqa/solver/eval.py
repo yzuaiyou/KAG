@@ -168,7 +168,8 @@ if __name__ == "__main__":
         "answer_similarity": 0.0,
         "processNum": 0,
     }
-    debug_index = None
+    #debug_index = {385, 130, 265, 268, 401, 658, 403, 534, 408, 281, 285, 414, 548, 427, 686, 47, 178, 56, 187, 317, 446, 64, 66, 708, 324, 70, 455, 329, 472, 602, 98, 100, 108, 238, 494, 496, 369, 372, 631, 504, 761, 380, 767}
+    debug_index = [4]
     error_question_map = {"error": [], "no_answer": [], "system_error": []}
     for _item in _finqa_data_list:
         i = _item["index"]
@@ -191,6 +192,17 @@ if __name__ == "__main__":
             logging.exception("qa error")
             _prediction = str(None)
         print("#" * 100)
+        metrics = evaObj.check(_prediction, _answer, _exe_ans)
+
+        __error = False
+        if metrics["em"] < 0.9:
+            __error = True
+            if "None" == _prediction:
+                error_question_map["system_error"].append((i, _id))
+            elif "i don't know" in _prediction.lower():
+                error_question_map["no_answer"].append((i, _id))
+            else:
+                error_question_map["error"].append((i, _id))
         print(
             "index="
             + str(i)
@@ -200,16 +212,9 @@ if __name__ == "__main__":
             + str(_answer)
             + ",prediction="
             + str(_prediction)
+            + ",error="
+            + str(__error)
         )
-        metrics = evaObj.check(_prediction, _answer, _exe_ans)
-
-        if metrics["em"] < 0.9:
-            if "None" == _prediction:
-                error_question_map["system_error"].append((i, _id))
-            elif "i don't know" in _prediction.lower():
-                error_question_map["no_answer"].append((i, _id))
-            else:
-                error_question_map["error"].append((i, _id))
 
         total_metrics["em"] += metrics["em"]
         total_metrics["f1"] += metrics["f1"]

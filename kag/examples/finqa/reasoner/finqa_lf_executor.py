@@ -121,11 +121,11 @@ class FinQACoderMathOp(OpExecutor):
         example_list = process_info["examples"]
         target = question
         if 0 == i:
-            example_list = [example_list[i] for i in [0, 2, 4]]
+            example_list = [example_list[i] for i in [0, 1, 2]]
         elif 1 == i:
-            example_list = [example_list[i] for i in [0, 1, 4]]
+            example_list = [example_list[i] for i in [0, 1, 2]]
         elif 2 == i:
-            example_list = [example_list[i] for i in [0, 1, 3]]
+            example_list = [example_list[i] for i in [0, 1, 2]]
             target = lf_plan.query
         example_str = "\n\n".join(example_list)
         try_times = 3

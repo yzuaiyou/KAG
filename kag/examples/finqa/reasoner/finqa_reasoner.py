@@ -154,11 +154,15 @@ class FinQAReasoner(KagReasonerABC):
             step_index += 1
             if step_index >= 10:
                 break
-            if 1 == step_index and not get_all_recall_docs(
-                execute_rst_list=execute_rst_list
-            ):
+            if 0 == step_index:
                 lf_nodes = self._create_lf_node(question=question, _type="retrieval")
-            elif step_index > 3 and not get_all_recall_docs(
+            elif 1 == step_index:
+                lf_nodes: List[LFPlan] = self.lf_planner.lf_planing(
+                    question,
+                    process_info=process_info,
+                    execute_rst_list=[],
+                )
+            elif step_index > 4 and not get_all_recall_docs(
                 execute_rst_list=execute_rst_list
             ):
                 break

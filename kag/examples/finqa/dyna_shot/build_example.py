@@ -44,11 +44,12 @@ class BuildExamplePipeline:
         )
 
     def build(self, start_index=0):
-        train_data_list = self.load_finqa_train_data() + self.load_finqa_train_data(
-            _type="dev"
-        )
+        error_set = {385, 130, 265, 268, 401, 658, 403, 534, 408, 281, 285, 414, 548, 427, 686, 47, 178, 56, 187, 317, 446, 64, 66, 708, 324, 70, 455, 329, 472, 602, 98, 100, 108, 238, 494, 496, 369, 372, 631, 504, 761, 380, 767}
+        train_data_list = self.load_finqa_train_data(_type="test")
         for i, item in enumerate(train_data_list):
             if i < start_index:
+                continue
+            if i not in error_set:
                 continue
             # file_path = convert_finqa_to_md_file(item)
             # with open(file_path, "r", encoding="utf-8") as file:
@@ -80,7 +81,9 @@ class BuildExamplePipeline:
                         with_cache=False,
                     )
                     if tags is None or correct is None or formula is None:
-                        logging.error(f"index={i},tags={tags},correct={correct},formula={formula}")
+                        logging.error(
+                            f"index={i},tags={tags},correct={correct},formula={formula}"
+                        )
                         continue
                     break
                 doc = question + " tags=" + str(tags)
@@ -102,7 +105,9 @@ class BuildExamplePipeline:
                         {
                             "formula": formula,
                             "gold_inds": json.dumps(
-                                item["qa"]["gold_inds"], ensure_ascii=False, sort_keys=True
+                                item["qa"]["gold_inds"],
+                                ensure_ascii=False,
+                                sort_keys=True,
                             ),
                             "question": question,
                         }
@@ -140,7 +145,7 @@ class BuildExamplePipeline:
 
 if __name__ == "__main__":
     resp = BuildExamplePipeline()
-    resp.build(2821)
+    resp.build(0)
     # examples, docs = resp.search_example(
     #     "what is the total of home equity lines of credit, tags=['Total Sum']"
     # )
