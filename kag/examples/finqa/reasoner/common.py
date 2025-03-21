@@ -74,10 +74,10 @@ def get_execute_context(
             lf_plan: LFPlan = lf_plan
             if lf_plan.sub_query_type != "math":
                 continue
-            answer = f"The result calculated by the Python is: {lf_plan.res.sub_answer}"
+            answer = f"The result of Python execution is: {lf_plan.res.sub_answer}"
             if with_code:
                 python_code = lf_plan.res.debug_info["code"]
-                answer = f"Python code is:\n```python{python_code}```\nExecution result:{lf_plan.res.sub_answer}"
+                answer = f"Python code is:\n```python{python_code}```\nExecution result: {lf_plan.res.sub_answer}"
             context_list.append(
                 (lf_plan.query, lf_plan.sub_query_type, answer, lf_plan.res.debug_info)
             )

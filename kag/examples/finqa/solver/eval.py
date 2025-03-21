@@ -38,7 +38,7 @@ def qa(question, _i, _id):
     )
     answer, traceLog = resp.run(question)
     try:
-        #print(json.dumps(traceLog, ensure_ascii=False))
+        # print(json.dumps(traceLog, ensure_ascii=False))
         code = ""
         question = ""
         memory = ""
@@ -58,62 +58,35 @@ def qa(question, _i, _id):
 
 class FinQAEvaluate(Evaluate):
 
-    def check(self, question: str, prediction: str, answer: str, exe_ans: str):
+    def check(self, prediction: str, answer: str, exe_ans: str):
         """
-        修复几种答案错误：
-        1. 答案是百分比时，answer与exe_ans符号不一致
-        2. answer是yes，但是exe_ans是数字
-        3. percentage decline和percentage decrease问题，答案可为正数也可为负数
-
-        修改预测值:
-        1. 带有%号的，去除%，数值除以100
+        prediction和exe_ans进行比较
         """
 
-        try:
-            float(exe_ans)
-            float(prediction)
-        except:
-            # yes or no
-            return super().getBenchMark([prediction], [exe_ans])
-
-        # 1. 答案是百分比时，answer与exe_ans符号不一致
-        try:
-            prediction = prediction.strip()
-            answer = answer.strip()
-            if answer.endswith("%"):
-                if not self.is_same_sign(answer.strip("%"), exe_ans):
-                    # answer和exe_ans的符号必须一致，否则都使用绝对值
-                    answer = str(abs(float(answer.strip("%")))) + "%"
-                    exe_ans = str(abs(float(exe_ans)))
-                    prediction = str(abs(float(prediction)))
-
-            # 2. answer是yes，但是exe_ans是数字
-            if "yes" == answer.lower() and self.is_float(exe_ans):
-                exe_ans = answer
-            # 3. percentage decline和percentage decrease问题，答案可为正数也可为负数
-            if answer.endswith("%"):
-                if "decrease" in question.lower() or "decline" in question.lower():
-                    answer = str(abs(float(answer.strip("%")))) + "%"
-                    exe_ans = str(abs(float(exe_ans)))
-                    prediction = str(abs(float(prediction)))
-        except:
-            pass
+        prediction = prediction.strip()
         try:
             # 1. 带有%号的，去除%，数值除以100
-            prediction = prediction.strip()
             if prediction.endswith("%"):
                 prediction = prediction.strip("%")
                 prediction = str(float(prediction) / 100)
-
         except:
             pass
+
+        answer = answer.strip()
+        exe_ans = exe_ans.strip()
+
+        if not self.is_float(prediction):
+            return super().getBenchMark([prediction], [exe_ans])
 
         # 比较prediction和exe_ans完全相等
         if self.is_close_rel(exe_ans, prediction):
             return super().getBenchMark(["em"], ["em"])
         elif self.is_percentage_close(exe_ans, prediction):
             return super().getBenchMark(["em"], ["em"])
-
+        elif self.is_float(answer.strip("%")) and self.is_close_rel(
+            answer.strip("%"), prediction
+        ):
+            return super().getBenchMark(["em"], ["em"])
         return super().getBenchMark([prediction], [exe_ans])
 
     def is_float(self, value):
@@ -145,6 +118,9 @@ class FinQAEvaluate(Evaluate):
             if "." in num:
                 return len(num.split(".")[1])
             return 0
+
+        num1 = str(abs(float(num1)))
+        num2 = str(abs(float(num2)))
 
         precision1 = get_precision(num1)
         precision2 = get_precision(num2)
@@ -210,7 +186,7 @@ if __name__ == "__main__":
                 + ",prediction="
                 + str(_prediction)
             )
-            metrics = evaObj.check(_question, _prediction, _answer, _exe_ans)
+            metrics = evaObj.check(_prediction, _answer, _exe_ans)
 
             if metrics["em"] < 0.9:
                 if "None" == _prediction:
