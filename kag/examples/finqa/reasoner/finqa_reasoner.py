@@ -142,6 +142,8 @@ class FinQAReasoner(KagReasonerABC):
         step_index = -1
         execute_rst_list = []
         process_info = {
+            "file_name": kwargs.get("file_name", None),
+            "chunk_len": 500,
             "kg_solved_answer": [],
             "sub_qa_pair": [],
             "goal": question,

@@ -222,6 +222,7 @@ class GetSPOExecutor(OpExecutor):
             all_related_entities = list(set(all_related_entities))
             sub_queries = self._rewrite_sub_query_with_history_qa(history, lf.query)
             lf.rewrite_query = sub_queries
+            params["process_info"] = process_info
             doc_retrieved = self.chunk_retriever.recall_docs(
                 queries=[query] + sub_queries,
                 retrieved_spo=all_related_entities,

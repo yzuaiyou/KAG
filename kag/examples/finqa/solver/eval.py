@@ -1,3 +1,5 @@
+import sys
+import os
 import logging
 import json
 import re
@@ -9,7 +11,6 @@ from kag.common.benchmarks.evaluate import Evaluate
 from kag.common.registry import import_modules_from_path
 from kag.common.conf import KAG_CONFIG
 
-from kag.examples.finqa.builder.indexer import build_finqa_graph, load_finqa_data
 
 from kag.examples.finqa.reasoner.finqa_reasoner import FinQAReasoner
 from kag.examples.finqa.reasoner.finqa_lf_planner import FinQALFPlanner
@@ -32,11 +33,11 @@ from kag.examples.finqa.solver.prompt.math_select_prompt import MathSelectPrompt
 from kag.examples.finqa.reasoner.finqa_solver_pipeline import FinQASolverPipeline
 
 
-def qa(question, _i, _id):
+def qa(question, file_name, _i, _id):
     resp = FinQASolverPipeline.from_config(
         KAG_CONFIG.all_config["finqa_solver_pipeline"]
     )
-    answer, traceLog = resp.run(question)
+    answer, traceLog = resp.run(question, file_name=file_name)
     try:
         # print(json.dumps(traceLog, ensure_ascii=False))
         code = ""
@@ -139,8 +140,27 @@ class FinQAEvaluate(Evaluate):
         return (num1 >= 0 and num2 >= 0) or (num1 < 0 and num2 < 0)
 
 
+def load_finqa_data_list() -> map:
+    """
+    load data
+    """
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    file_name = os.path.join(current_dir, "..", "builder", "data", "test.json")
+    with open(file_name, "r", encoding="utf-8") as f:
+        data_list = json.load(f)
+    print("finqa data list len " + str(len(data_list)))
+    for _idx, data in enumerate(data_list):
+        data["index"] = _idx
+    return data_list
+
+
 if __name__ == "__main__":
-    _finqa_file_to_qa_map = load_finqa_data()
+    process_idx = 0
+    all_idx = 1
+    if len(sys.argv) >= 3:
+        process_idx = int(sys.argv[1])
+        all_idx = int(sys.argv[2])
+    _finqa_data_list = load_finqa_data_list()
     evaObj = FinQAEvaluate()
     total_metrics = {
         "em": 0.0,
@@ -150,58 +170,53 @@ if __name__ == "__main__":
     }
     debug_index = None
     error_question_map = {"error": [], "no_answer": [], "system_error": []}
-    for file_name, _item_list in _finqa_file_to_qa_map.items():
+    for _item in _finqa_data_list:
+        i = _item["index"]
+        if i % all_idx != process_idx:
+            continue
         if debug_index is not None:
-            index_set = set([_item["index"] for _item in _item_list])
-            intersection = index_set.intersection(set(debug_index))
-            if len(intersection) <= 0:
+            if i not in debug_index:
                 continue
-
-        build_finqa_graph(_item_list[0])
-
-        for _item in _item_list:
-            i = _item["index"]
-            if debug_index is not None:
-                if i not in debug_index:
-                    continue
-            _id = _item["id"]
-            _question = _item["qa"]["question"]
-            _answer = str(_item["qa"]["answer"])
-            _exe_ans = str(_item["qa"]["exe_ans"])
-            try:
-                _prediction = qa(question=_question, _i=i, _id=_id)
-            except KeyboardInterrupt:
-                break
-            except:
-                logging.exception("qa error")
-                _prediction = str(None)
-            print("#" * 100)
-            print(
-                "index="
-                + str(i)
-                + ",gold="
-                + str(_exe_ans)
-                + ",answer="
-                + str(_answer)
-                + ",prediction="
-                + str(_prediction)
+        _id = _item["id"]
+        _question = _item["qa"]["question"]
+        _answer = str(_item["qa"]["answer"])
+        _exe_ans = str(_item["qa"]["exe_ans"])
+        try:
+            _prediction = qa(
+                question=_question, file_name=_item["filename"], _i=i, _id=_id
             )
-            metrics = evaObj.check(_prediction, _answer, _exe_ans)
+        except KeyboardInterrupt:
+            break
+        except:
+            logging.exception("qa error")
+            _prediction = str(None)
+        print("#" * 100)
+        print(
+            "index="
+            + str(i)
+            + ",gold="
+            + str(_exe_ans)
+            + ",answer="
+            + str(_answer)
+            + ",prediction="
+            + str(_prediction)
+        )
+        metrics = evaObj.check(_prediction, _answer, _exe_ans)
 
-            if metrics["em"] < 0.9:
-                if "None" == _prediction:
-                    error_question_map["system_error"].append((i, _id))
-                elif "i don't know" in _prediction.lower():
-                    error_question_map["no_answer"].append((i, _id))
-                else:
-                    error_question_map["error"].append((i, _id))
+        if metrics["em"] < 0.9:
+            if "None" == _prediction:
+                error_question_map["system_error"].append((i, _id))
+            elif "i don't know" in _prediction.lower():
+                error_question_map["no_answer"].append((i, _id))
+            else:
+                error_question_map["error"].append((i, _id))
 
-            total_metrics["em"] += metrics["em"]
-            total_metrics["f1"] += metrics["f1"]
-            total_metrics["answer_similarity"] += metrics["answer_similarity"]
-            total_metrics["processNum"] += 1
+        total_metrics["em"] += metrics["em"]
+        total_metrics["f1"] += metrics["f1"]
+        total_metrics["answer_similarity"] += metrics["answer_similarity"]
+        total_metrics["processNum"] += 1
 
-            print(total_metrics)
-            print(total_metrics["em"] / total_metrics["processNum"] * 100)
-            print("error index list=" + str(error_question_map))
-            print("#" * 100)
+        print(total_metrics)
+        print(total_metrics["em"] / total_metrics["processNum"] * 100)
+        print("error index list=" + str(error_question_map))
+        print("#" * 100)

@@ -62,7 +62,7 @@ def get_execute_context(
             else:
                 doc_index = docs_map[doc]
                 in_context_docs_map[doc] = doc_index
-                doc = f"### [Documnt {doc_index}]\n```{doc}```"
+                doc = f"### [Documnt {doc_index}]\n```\n{doc}\n```"
             if len(answer) > 0:
                 answer += "\n"
             answer += doc

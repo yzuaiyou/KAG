@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 定义要查找的进程关键字
-PROCESS_KEYWORD="python -u eval.py"
+PROCESS_KEYWORD="python -u /home/zhenzhi/code/KAG/kag/examples/finqa/solver/eval.py"
 
 # 查找匹配的进程ID
 PIDS=$(ps aux | grep "$PROCESS_KEYWORD" | grep -v grep | awk '{print $2}')

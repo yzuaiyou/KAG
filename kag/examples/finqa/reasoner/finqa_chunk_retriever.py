@@ -8,6 +8,11 @@
 # Unless required by applicable law or agreed to in writing, software distributed under the License
 # is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
 # or implied.
+
+import os
+
+import chromadb
+
 import knext.common.cache
 from kag.interface import PromptABC, VectorizeModelABC
 from tenacity import retry, stop_after_attempt
@@ -73,19 +78,35 @@ class FinQAChunkRetriever(KAGRetriever):
             "rerank_chunks", self.biz_scene
         )
 
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        chromadb_path = os.path.join(current_dir, "..", "builder", "chunk_chromadb")
+        os.makedirs(chromadb_path, exist_ok=True)
+        chroma_client = chromadb.PersistentClient(path=chromadb_path)
+        self.collection = chroma_client.create_collection(
+            name="chunk", get_or_create=True
+        )
+
     def rerank_docs(self, queries: List[str], passages: List[str]):
         return self._rerank_docs_by_llm(queries=queries, passages=passages)
 
-    # def recall_docs(
-    #     self,
-    #     queries: List[str],
-    #     retrieved_spo: Optional[List[RelationData]] = None,
-    #     **kwargs,
-    # ) -> List[str]:
-    #     docs = super().recall_docs(
-    #         queries=queries, retrieved_spo=retrieved_spo, **kwargs
-    #     )
-    #     return self._rerank_docs_by_llm(queries=queries, passages=docs)
+    def recall_docs(
+        self,
+        queries: List[str],
+        retrieved_spo: Optional[List[RelationData]] = None,
+        **kwargs,
+    ) -> List[str]:
+        process_info = kwargs.get("kwargs", {}).get("process_info", None)
+        file_name = process_info["file_name"]
+        chunk_len = process_info["chunk_len"]
+        query_txt = "\n".join(queries)
+        rsts = self.collection.query(
+            query_texts=[query_txt],
+            n_results=10,
+            where={"file_name": f"{file_name}_{chunk_len}"},
+        )
+        rst = sorted(rsts["documents"][0])
+        rst = [f"#{file_name}#{c}#0.0" for c in rst]
+        return rst
 
     @retry(stop=stop_after_attempt(3))
     def _rerank_docs_by_llm(self, queries: List[str], passages: List[str]):
