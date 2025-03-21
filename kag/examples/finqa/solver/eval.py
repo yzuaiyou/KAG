@@ -168,8 +168,7 @@ if __name__ == "__main__":
         "answer_similarity": 0.0,
         "processNum": 0,
     }
-    #debug_index = {385, 130, 265, 268, 401, 658, 403, 534, 408, 281, 285, 414, 548, 427, 686, 47, 178, 56, 187, 317, 446, 64, 66, 708, 324, 70, 455, 329, 472, 602, 98, 100, 108, 238, 494, 496, 369, 372, 631, 504, 761, 380, 767}
-    debug_index = [4]
+    debug_index = None
     error_question_map = {"error": [], "no_answer": [], "system_error": []}
     for _item in _finqa_data_list:
         i = _item["index"]

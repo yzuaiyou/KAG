@@ -251,9 +251,13 @@ if __name__ == "__main__":
     chroma_client = chromadb.PersistentClient(path=chromadb_path)
     collection = chroma_client.create_collection(name="chunk", get_or_create=True)
 
-    id_set = ["MAS/2017/page_27.pdf"]
+    id_set = None
     _finqa_file_to_qa_map = load_finqa_data()
+    print(f"all_data={len(_finqa_file_to_qa_map)}")
+    idx = 0
     for file_name, _item_list in _finqa_file_to_qa_map.items():
+        idx += 1
+        print(f"now_idx={idx}")
         if id_set is not None and file_name not in id_set:
             continue
         try:
