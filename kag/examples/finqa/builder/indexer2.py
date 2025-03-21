@@ -159,7 +159,7 @@ def _table_to_row_col_index_df(df, update_column=False):
     return new_df
 
 
-def get_table_data(prev, post, table_df: pd.DataFrame):
+def get_table_data(file_name, prev, post, table_df: pd.DataFrame):
     tmp_df = _table_to_row_col_index_df(df=table_df)
     table_index_md = tmp_df.to_markdown(index=False)
     input_str = f"{prev}\n\n{table_index_md}\n\n{post}"
@@ -170,36 +170,53 @@ def get_table_data(prev, post, table_df: pd.DataFrame):
         with_except=True,
         with_cache=True,
     )
+    try:
+        header_idx_list = []
+        for row_summary in row_summary_list:
+            if row_summary["type"] != "header":
+                continue
+            row_index = row_summary["index"]
+            header_idx_list.append(row_index)
+        header_idx_list = sorted(header_idx_list)
+        is_consecutive_from_zero = sorted(set(header_idx_list)) == list(range(len(set(header_idx_list))))
+        if not is_consecutive_from_zero:
+            raise RuntimeWarning("分离的header表")
 
-    header_list = None
-    for row_summary in row_summary_list:
-        if row_summary["type"] != "header":
-            continue
-        row_index = row_summary["index"]
-        new_header_list = None
-        if 0 == row_index:
-            new_header_list = table_df.columns
-        else:
-            new_header_list = table_df.iloc[row_index - 1].tolist()
-        if header_list is None:
-            header_list = new_header_list
-        else:
-            header_list = zip(header_list, new_header_list)
+        header_list = None
+        for row_summary in row_summary_list:
+            if row_summary["type"] != "header":
+                continue
+            row_index = row_summary["index"]
+            new_header_list = None
+            if 0 == row_index:
+                new_header_list = table_df.columns
+            else:
+                new_header_list = table_df.iloc[row_index - 1].tolist()
+            if header_list is None:
+                header_list = new_header_list
+            else:
+                header_list = zip(header_list, new_header_list)
 
-    rst_row_summary_list = []
-    for row_summary in row_summary_list:
-        if row_summary["type"] != "data":
-            continue
-        row_index = row_summary["index"]
-        data = table_df.iloc[row_index - 1].tolist()
-        if header_list is not None:
-            df = pd.DataFrame([data], columns=header_list)
-        else:
-            df = pd.DataFrame([data])
-        content = df.to_markdown(index=False)
-        rst_row_summary_list.append(
-            f"{table_summary}\n{row_summary['summary']}\n{content}"
-        )
+        rst_row_summary_list = []
+        for row_summary in row_summary_list:
+            if row_summary["type"] != "data":
+                continue
+            row_index = row_summary["index"]
+            if 0 == row_index:
+                data = table_df.columns
+            else:
+                data = table_df.iloc[row_index - 1].tolist()
+            if header_list is not None:
+                df = pd.DataFrame([data], columns=header_list)
+            else:
+                df = pd.DataFrame([data])
+            content = df.to_markdown(index=False)
+            rst_row_summary_list.append(
+                f"{table_summary}\n{row_summary['summary']}\n{content}"
+            )
+    except:
+        logging.exception("convert table error, file_name=%s", file_name)
+        return [f"{table_summary}\n{table_df.to_markdown(index=False)}"]
     return rst_row_summary_list
 
 
@@ -220,6 +237,7 @@ def convert_data(item, limitlen) -> list:
     return (
         prev_chunk_list
         + get_table_data(
+            item["filename"],
             prev_chunk_list[-1] if len(prev_chunk_list) > 0 else "",
             post_chunk_list[0] if len(post_chunk_list) > 0 else "",
             table_df=table_df,
@@ -251,7 +269,7 @@ if __name__ == "__main__":
     chroma_client = chromadb.PersistentClient(path=chromadb_path)
     collection = chroma_client.create_collection(name="chunk", get_or_create=True)
 
-    id_set = None
+    id_set = {"AMT/2016/page_49.pdf"}
     _finqa_file_to_qa_map = load_finqa_data()
     print(f"all_data={len(_finqa_file_to_qa_map)}")
     idx = 0
