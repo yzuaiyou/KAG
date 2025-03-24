@@ -104,7 +104,7 @@ class FinQAReasoner(KagReasonerABC):
             "question_classify", self.biz_scene
         )
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        chromadb_path = os.path.join(current_dir, "..", "dyna_shot", "chromadb_v2")
+        chromadb_path = os.path.join(current_dir, "..", "dyna_shot", "chromadb")
         self.chroma_client = chromadb.PersistentClient(path=chromadb_path)
         self.collection = self.chroma_client.create_collection(
             name="finqa_example", get_or_create=True
