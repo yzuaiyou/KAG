@@ -197,6 +197,8 @@ def get_table_data(file_name, prev, post, table_df: pd.DataFrame):
             else:
                 header_list = zip(header_list, new_header_list)
 
+        if header_list is not None:
+            header_list = list(header_list)
         rst_row_summary_list = []
         for row_summary in row_summary_list:
             if row_summary["type"] != "data":
@@ -251,7 +253,7 @@ def save_data(item, collection):
     print(file_name)
     chunk_len = 500
     documents = convert_data(item, chunk_len)
-    documents = [f"{i}. {d}" for i, d in enumerate(documents)]
+    documents = [f"{i:02d}. {d}" for i, d in enumerate(documents)]
     metadatas = [{"file_name": f"{file_name}_{chunk_len}"} for doc in documents]
     ids = [f"{file_name}_{chunk_len}_{i}" for i, _ in enumerate(documents)]
 
@@ -269,7 +271,7 @@ if __name__ == "__main__":
     chroma_client = chromadb.PersistentClient(path=chromadb_path)
     collection = chroma_client.create_collection(name="chunk", get_or_create=True)
 
-    id_set = {"AMT/2016/page_49.pdf"}
+    id_set = None
     _finqa_file_to_qa_map = load_finqa_data()
     print(f"all_data={len(_finqa_file_to_qa_map)}")
     idx = 0

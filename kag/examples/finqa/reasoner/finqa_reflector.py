@@ -96,6 +96,8 @@ class FinQAReflector(KagReflectorABC):
 
     @retry(stop=stop_after_attempt(3))
     def _refine_query(self, memory: KagMemoryABC, instruction: str):
+        from kag.interface.common.kv_store import KVStore
+        KVStore.disable = True
         memory: FinQAMemory = memory
         recall_docs = get_all_recall_docs(memory.lf_res.execute_rst_list)
         if len(recall_docs) <= 0:

@@ -37,6 +37,8 @@ def qa(question, file_name, _i, _id):
     resp = FinQASolverPipeline.from_config(
         KAG_CONFIG.all_config["finqa_solver_pipeline"]
     )
+    from kag.interface.common.kv_store import KVStore
+    KVStore.disable = False
     answer, traceLog = resp.run(question, file_name=file_name)
     try:
         # print(json.dumps(traceLog, ensure_ascii=False))

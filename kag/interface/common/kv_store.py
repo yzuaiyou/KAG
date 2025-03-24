@@ -22,11 +22,14 @@ def init_db(db_name):
 
 
 class KVStore:
+
+    disable = False
+
     def __init__(self, db_name=None):
         if db_name is None:
             db_name = "/tmp/llm_cache"
         if not have_sql_lite:
-            self.disable = True
+            KVStore.disable = True
             return
         self.db_name = db_name
         if not os.path.exists(db_name):
@@ -37,15 +40,13 @@ class KVStore:
         self.read_lock = threading.Lock()
         self.write_lock = threading.Lock()
 
-        self.disable = False
-
     def __del__(self):
-        if self.disable:
+        if KVStore.disable:
             return
         self.conn.close()
 
     def set_value(self, key, value):
-        if self.disable:
+        if KVStore.disable:
             return
         serialized_data = pickle.dumps(value)
         encoded_data = base64.b64encode(serialized_data).decode("utf-8")
@@ -58,7 +59,7 @@ class KVStore:
                 self.conn.commit()
 
     def get_value(self, key):
-        if self.disable:
+        if KVStore.disable:
             return None, None
         with self.read_lock:
             with self.rlock:
@@ -73,7 +74,7 @@ class KVStore:
                     return None, None
 
     def delete(self ,key):
-        if self.disable:
+        if KVStore.disable:
             return False
         with self.write_lock:
             with self.rlock:
