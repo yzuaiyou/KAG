@@ -52,6 +52,7 @@ class BuilderComponent(Component, Registrable):
             )
         else:
             self.checkpointer = None
+        self.checkpointer = None
 
     @property
     def type(self):
