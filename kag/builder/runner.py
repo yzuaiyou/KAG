@@ -278,22 +278,15 @@ class BuilderChainStreamRunner(BuilderChainRunner):
         Args:
             input: The input data to be processed.
         """
-        # 创建线程局部存储
-        thread_local = threading.local()
+        import copy
 
-        def process(data, data_id, data_abstract):
+        chains = [copy.deepcopy(self.chain) for _ in range(self.num_chains)]
+        chain_index = 0  # 用于轮流分配chain实例
+        chain_lock = threading.Lock()  # 用于同步对chain_index的访问
+
+        def process(chain_instance, data, data_id, data_abstract):
             try:
-                # 为每个线程创建一个独立的chain实例
-                if not hasattr(thread_local, "chain"):
-                    # 可以深度复制chain或重新实例化一个相同配置的chain
-                    import copy
-
-                    thread_local.chain = copy.deepcopy(self.chain)
-                    print(
-                        f"Created new chain instance for thread {threading.current_thread().name}"
-                    )
-
-                result = thread_local.chain.invoke(
+                result = chain_instance.invoke(
                     data,
                     max_workers=self.num_threads_per_chain,
                     processed_chunk_keys=self.processed_chunks.keys(),
@@ -313,13 +306,21 @@ class BuilderChainStreamRunner(BuilderChainRunner):
 
                 # Start a separate thread to iterate through the scanner
                 def generate_items():
+                    nonlocal chain_index
                     for item in self.scanner.generate(input):
                         item_id, item_abstract = generate_hash_id_and_abstract(item)
-                        # if self.checkpointer.exists(item_id):
-                        #     continue
+                        if self.checkpointer.exists(item_id):
+                            continue
 
-                        # Submit new task and track its metadata
-                        fut = executor.submit(process, item, item_id, item_abstract)
+                        # 以轮流方式为每个任务分配一个chain实例
+                        with chain_lock:
+                            chain_to_use = chains[chain_index]
+                            chain_index = (chain_index + 1) % self.num_chains
+
+                        # Submit new task with specific chain instance
+                        fut = executor.submit(
+                            process, chain_to_use, item, item_id, item_abstract
+                        )
                         nonlocal submitted
                         futures_map[fut] = (submitted, item_id, item_abstract)
                         submitted += 1
