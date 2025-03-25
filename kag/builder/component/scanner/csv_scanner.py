@@ -13,7 +13,6 @@ from typing import Dict, List
 
 import pandas as pd
 from kag.interface import ScannerABC
-from kag.common.utils import generate_hash_id
 from knext.common.base.runnable import Input, Output
 
 
@@ -61,44 +60,13 @@ class CSVScanner(ScannerABC):
         else:
             data = pd.read_csv(input, dtype=str, header=None, delimiter=self.delimiter)
 
-        # 如果有多个分片，根据rank和world_size进行数据分片
-        if self.sharding_info.shard_count > 1:
-            total_rows = len(data)
-            shard_size = total_rows // self.sharding_info.shard_count
-            start_idx = self.sharding_info.shard_id * shard_size
-            end_idx = (
-                start_idx + shard_size
-                if self.sharding_info.shard_id < self.sharding_info.shard_count - 1
-                else total_rows
-            )
-            data = data.iloc[start_idx:end_idx]
-
-        if self.col_names:
-            col_keys = self.col_names
-        elif self.col_ids:
-            if self.header:
-                all_keys = data.keys().to_list()
-                col_keys = [all_keys[x] for x in self.col_ids]
-            else:
-                col_keys = self.col_ids
-        else:
-            col_keys = None
-
+        col_keys = self.col_names if self.col_names else self.col_ids
         if col_keys is None:
             return data.to_dict(orient="records")
 
         contents = []
         for _, row in data.iterrows():
-            for k, v in row.items():
-                if k in col_keys:
-                    v = str(v)
-                    if len(v) <= 10:
-                        name = v
-                    else:
-                        name = v[:5] + "..." + v[-5:]
-                    contents.append(
-                        {"id": generate_hash_id(v), "name": name, "content": v}
-                    )
+            contents.append(row.to_dict())
 
         return contents
 
