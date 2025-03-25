@@ -278,20 +278,14 @@ class BuilderChainStreamRunner(BuilderChainRunner):
         Args:
             input: The input data to be processed.
         """
-        # 创建线程局部存储
-        thread_local = threading.local()
 
-        def process(data, data_id, data_abstract):
+        def process(thread_local, data, data_id, data_abstract):
             try:
                 # 为每个线程创建一个独立的chain实例
                 if not hasattr(thread_local, "chain"):
-                    # 可以深度复制chain或重新实例化一个相同配置的chain
-                    import copy
-
-                    thread_local.chain = copy.deepcopy(self.chain)
-                    print(
-                        f"Created new chain instance for thread {threading.current_thread().name}"
-                    )
+                    # 如果chain可以被复制或克隆，可以使用该方法
+                    # 否则需要重新创建一个具有相同配置的chain
+                    thread_local.chain = type(self.chain)(**self.chain.__dict__)
 
                 result = thread_local.chain.invoke(
                     data,
@@ -306,6 +300,7 @@ class BuilderChainStreamRunner(BuilderChainRunner):
         print(f"Processing stream from {input}")
         success = 0
         submitted = 0
+        thread_local = threading.local()
 
         try:
             with ThreadPoolExecutor(self.num_chains) as executor:
@@ -315,11 +310,13 @@ class BuilderChainStreamRunner(BuilderChainRunner):
                 def generate_items():
                     for item in self.scanner.generate(input):
                         item_id, item_abstract = generate_hash_id_and_abstract(item)
-                        # if self.checkpointer.exists(item_id):
-                        #     continue
+                        if self.checkpointer.exists(item_id):
+                            continue
 
-                        # Submit new task and track its metadata
-                        fut = executor.submit(process, item, item_id, item_abstract)
+                        # Submit new task and track its metadata - 传入thread_local
+                        fut = executor.submit(
+                            process, thread_local, item, item_id, item_abstract
+                        )
                         nonlocal submitted
                         futures_map[fut] = (submitted, item_id, item_abstract)
                         submitted += 1
