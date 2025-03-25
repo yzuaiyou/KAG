@@ -299,76 +299,26 @@ class BuilderChainStreamRunner(BuilderChainRunner):
             with ThreadPoolExecutor(self.num_chains) as executor:
                 futures_map = {}  # Maps Future objects to metadata
 
-                def generate_items(restart_event):
-                    try:
-                        for item in self.scanner.generate(input):
-                            if restart_event.is_set():
-                                logger.info(
-                                    "Restarting generator thread detected, stopping current execution"
-                                )
-                                return
+                # Start a separate thread to iterate through the scanner
+                def generate_items():
+                    for item in self.scanner.generate(input):
+                        item_id, item_abstract = generate_hash_id_and_abstract(item)
+                        # if self.checkpointer.exists(item_id):
+                        #     continue
 
-                            item_id, item_abstract = generate_hash_id_and_abstract(item)
-                            # if self.checkpointer.exists(item_id):
-                            #     continue
+                        # Submit new task and track its metadata
+                        fut = executor.submit(process, item, item_id, item_abstract)
+                        nonlocal submitted
+                        futures_map[fut] = (submitted, item_id, item_abstract)
+                        submitted += 1
 
-                            # Submit new task and track its metadata
-                            fut = executor.submit(process, item, item_id, item_abstract)
-                            nonlocal submitted
-                            futures_map[fut] = (submitted, item_id, item_abstract)
-                            submitted += 1
-                    except Exception:
-                        logger.error(
-                            f"Error in generate_items thread: {traceback.format_exc()}"
-                        )
-                        return
-
-                # 创建一个事件对象用于控制线程重启
-                restart_event = threading.Event()
-                gen_thread = None
-
-                def start_generator_thread():
-                    nonlocal gen_thread
-                    # 如果线程存在，发送重启信号并等待终止
-                    if gen_thread is not None and gen_thread.is_alive():
-                        restart_event.set()
-                        gen_thread.join(timeout=5.0)  # 等待最多5秒
-                        restart_event.clear()
-
-                    # 创建并启动新线程
-                    gen_thread = threading.Thread(
-                        target=generate_items, args=(restart_event,), daemon=True
-                    )
-                    gen_thread.start()
-                    return gen_thread
-
-                # 首次启动生成器线程
-                gen_thread = start_generator_thread()
-
-                # 最大重启次数，防止无限循环重启
-                max_restarts = 10
-                restart_count = 0
+                # Start the generator thread
+                gen_thread = threading.Thread(target=generate_items, daemon=True)
+                gen_thread.start()
 
                 # Process results as they complete
                 with tqdm(desc="Processing stream", position=0) as pbar:
-                    while (
-                        futures_map
-                        or (gen_thread and gen_thread.is_alive())
-                        or restart_count < max_restarts
-                    ):
-                        # 检查生成器线程是否需要重启
-                        if (
-                            gen_thread is not None
-                            and not gen_thread.is_alive()
-                            and restart_count < max_restarts
-                        ):
-                            logger.warning(
-                                f"Generator thread died, restarting (attempt {restart_count+1}/{max_restarts})"
-                            )
-                            gen_thread = start_generator_thread()
-                            restart_count += 1
-                            continue
-
+                    while gen_thread.is_alive() or futures_map:
                         # Process any completed futures
                         done_futures = []
                         for fut in list(futures_map.keys()):
@@ -412,16 +362,11 @@ class BuilderChainStreamRunner(BuilderChainRunner):
                                     f"Processed: {success}/{submitted}"
                                 )
 
-                        # 如果没有完成的future，稍微休眠以减少CPU使用
+                        # Small sleep to avoid busy-waiting
                         if not done_futures:
                             import time
 
                             time.sleep(0.1)
-
-                # 处理完成后清理
-                if gen_thread and gen_thread.is_alive():
-                    restart_event.set()
-                    gen_thread.join(timeout=2.0)
 
         except KeyboardInterrupt:
             print("\nInterrupted by user. Saving progress...")
