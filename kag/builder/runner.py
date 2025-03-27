@@ -12,6 +12,7 @@
 
 
 import os
+import time
 import traceback
 import logging
 import threading
@@ -263,15 +264,14 @@ class BuilderChainStreamRunner(BuilderChainRunner):
         #         "world_size": self.scanner.sharding_info.get_world_size(),
         #     }
         # )
-        self.processed_chunks = CheckpointerManager.get_checkpointer(
-            {
-                "type": "zodb",
-                "ckpt_dir": os.path.join(self.ckpt_dir, "chain"),
-                "rank": self.scanner.sharding_info.get_rank(),
-                "world_size": self.scanner.sharding_info.get_world_size(),
-            }
-        )
-        self._local = threading.local()
+        # self.processed_chunks = CheckpointerManager.get_checkpointer(
+        #     {
+        #         "type": "zodb",
+        #         "ckpt_dir": os.path.join(self.ckpt_dir, "chain"),
+        #         "rank": self.scanner.sharding_info.get_rank(),
+        #         "world_size": self.scanner.sharding_info.get_world_size(),
+        #     }
+        # )
 
     @staticmethod
     def _init_worker(chain_config, num_threads, register_path):
@@ -283,13 +283,12 @@ class BuilderChainStreamRunner(BuilderChainRunner):
         process_num_threads = num_threads
 
     @staticmethod
-    def process(data, data_id, data_abstract, processed_chunk_keys):
+    def process(data, data_id, data_abstract):
         try:
             global process_chain, process_num_threads
             result = process_chain.invoke(
                 data,
                 max_workers=process_num_threads,
-                processed_chunk_keys=processed_chunk_keys,
             )
             return data, data_id, data_abstract, result
         except Exception:
@@ -310,8 +309,16 @@ class BuilderChainStreamRunner(BuilderChainRunner):
         success = 0
         submitted = 0
 
-        # 不使用manager.dict()，使用普通字典
         futures_map = {}
+        # Calculate max map size based on available memory
+        # 1GB memory can handle about 5000 items
+        import psutil
+
+        max_map_size = (
+            5000 * (psutil.virtual_memory().total // (1024**3))
+            if psutil.virtual_memory().total > 0
+            else 5000
+        )
 
         # 获取chain的配置
         chain_config = self.chain.to_config()
@@ -334,12 +341,21 @@ class BuilderChainStreamRunner(BuilderChainRunner):
                                 item,
                                 item_id,
                                 item_abstract,
-                                self.processed_chunks.keys(),
                             )
                             nonlocal submitted
                             # 在本地字典中存储Future对象
-                            futures_map[fut] = (submitted, item_id, item_abstract)
-                            submitted += 1
+                            if len(futures_map) < max_map_size:
+                                futures_map[fut] = (submitted, item_id, item_abstract)
+                                submitted += 1
+                            else:
+                                # Wait until the futures map size is below 70% of max capacity
+                                while len(futures_map) >= max_map_size * 0.7:
+                                    # Sleep briefly to yield execution and avoid busy waiting
+                                    time.sleep(5)
+
+                                # Now we have space, add the future to the map
+                                futures_map[fut] = (submitted, item_id, item_abstract)
+                                submitted += 1
                         except Exception:
                             traceback.print_exc()
                             continue
@@ -351,61 +367,71 @@ class BuilderChainStreamRunner(BuilderChainRunner):
                 # Process results as they complete
                 with tqdm(desc="Processing stream", position=0) as pbar:
                     while gen_thread.is_alive() or futures_map:
-                        # Process any completed futures
-                        done_futures = []
-                        for fut in list(futures_map.keys()):
-                            if fut.done():
-                                done_futures.append(fut)
-
-                        for fut in done_futures:
-                            # 从本地字典获取信息
-                            submitted_id, item_id, item_abstract = futures_map.pop(fut)
-
-                            # 处理结果
+                        # Process any completed futures - 使用as_completed替代手动检查
+                        if futures_map:
+                            # 设置较短的超时时间，防止长时间阻塞
                             try:
-                                result = fut.result()
-                            except Exception:
-                                traceback.print_exc()
-                                continue
+                                # 只处理已经完成的future，这比轮询更高效
+                                for fut in as_completed(
+                                    list(futures_map.keys()), timeout=0.5
+                                ):
+                                    # 从本地字典获取信息
+                                    (
+                                        submitted_id,
+                                        item_id,
+                                        item_abstract,
+                                    ) = futures_map.pop(fut)
 
-                            if result is not None:
-                                item, item_id, item_abstract, chain_output = result
+                                    # 处理结果
+                                    try:
+                                        result = fut.result()
+                                    except Exception:
+                                        traceback.print_exc()
+                                        continue
 
-                                # Process the result and update checkpoints
-                                num_nodes, num_edges, num_subgraphs = 0, 0, 0
-                                for item in chain_output:
-                                    if isinstance(item, SubGraph):
-                                        num_nodes += len(item.nodes)
-                                        num_edges += len(item.edges)
-                                        num_subgraphs += 1
-                                    elif isinstance(item, dict):
-                                        for k, v in item.items():
-                                            self.processed_chunks.write_to_ckpt(k, k)
-                                            if isinstance(v, SubGraph):
-                                                num_nodes += len(v.nodes)
-                                                num_edges += len(v.edges)
+                                    if result is not None:
+                                        (
+                                            item,
+                                            item_id,
+                                            item_abstract,
+                                            chain_output,
+                                        ) = result
+
+                                        # Process the result and update checkpoints
+                                        num_nodes, num_edges, num_subgraphs = 0, 0, 0
+                                        for item in chain_output:
+                                            if isinstance(item, SubGraph):
+                                                num_nodes += len(item.nodes)
+                                                num_edges += len(item.edges)
                                                 num_subgraphs += 1
+                                            elif isinstance(item, dict):
+                                                for k, v in item.items():
+                                                    self.processed_chunks.write_to_ckpt(
+                                                        k, k
+                                                    )
+                                                    if isinstance(v, SubGraph):
+                                                        num_nodes += len(v.nodes)
+                                                        num_edges += len(v.edges)
+                                                        num_subgraphs += 1
 
-                                # info = {
-                                #     "num_nodes": num_nodes,
-                                #     "num_edges": num_edges,
-                                #     "num_subgraphs": num_subgraphs,
-                                # }
-                                # self.checkpointer.write_to_ckpt(
-                                #     item_id,
-                                #     {"abstract": item_abstract, "graph_stat": info},
-                                # )
-                                success += 1
-                                pbar.update(1)
-                                pbar.set_description(
-                                    f"Processed: {success}/{submitted}"
-                                )
+                                        success += 1
+                                        pbar.update(1)
+                                        pbar.set_description(
+                                            f"Processed: {success}/{submitted}"
+                                        )
+                            except TimeoutError:
+                                # 超时表示没有完成的任务，继续下一次循环
+                                pass
 
-                        # Small sleep to avoid busy-waiting
-                        if not done_futures:
-                            import time
-
-                            time.sleep(0.1)
+                            # 检查生产者线程是否还活着，如果死了且没有待处理任务则退出
+                            if not gen_thread.is_alive() and not futures_map:
+                                break
+                        else:
+                            # 如果没有等待中的future但生产者还活着，短暂休眠
+                            if gen_thread.is_alive():
+                                time.sleep(0.1)
+                            else:
+                                break  # 生产者结束且无待处理任务，退出循环
 
         except KeyboardInterrupt:
             print("\nInterrupted by user. Saving progress...")
