@@ -399,21 +399,21 @@ class BuilderChainStreamRunner(BuilderChainRunner):
                                         ) = result
 
                                         # Process the result and update checkpoints
-                                        num_nodes, num_edges, num_subgraphs = 0, 0, 0
-                                        for item in chain_output:
-                                            if isinstance(item, SubGraph):
-                                                num_nodes += len(item.nodes)
-                                                num_edges += len(item.edges)
-                                                num_subgraphs += 1
-                                            elif isinstance(item, dict):
-                                                for k, v in item.items():
-                                                    self.processed_chunks.write_to_ckpt(
-                                                        k, k
-                                                    )
-                                                    if isinstance(v, SubGraph):
-                                                        num_nodes += len(v.nodes)
-                                                        num_edges += len(v.edges)
-                                                        num_subgraphs += 1
+                                        # num_nodes, num_edges, num_subgraphs = 0, 0, 0
+                                        # for item in chain_output:
+                                        #     if isinstance(item, SubGraph):
+                                        #         num_nodes += len(item.nodes)
+                                        #         num_edges += len(item.edges)
+                                        #         num_subgraphs += 1
+                                        #     elif isinstance(item, dict):
+                                        #         for k, v in item.items():
+                                        #             self.processed_chunks.write_to_ckpt(
+                                        #                 k, k
+                                        #             )
+                                        #             if isinstance(v, SubGraph):
+                                        #                 num_nodes += len(v.nodes)
+                                        #                 num_edges += len(v.edges)
+                                        #                 num_subgraphs += 1
 
                                         success += 1
                                         pbar.update(1)
