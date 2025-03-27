@@ -363,6 +363,7 @@ class BuilderChainStreamRunner(BuilderChainRunner):
                 # Start the generator thread
                 gen_thread = threading.Thread(target=generate_items, daemon=True)
                 gen_thread.start()
+                gen_thread.join()
 
                 # Process results as they complete
                 with tqdm(desc="Processing stream", position=0) as pbar:
