@@ -423,9 +423,6 @@ class BuilderChainStreamRunner(BuilderChainRunner):
                                 # 超时表示没有完成的任务，继续下一次循环
                                 pass
 
-                            # 检查生产者线程是否还活着，如果死了且没有待处理任务则退出
-                            if not gen_thread.is_alive() and not futures_map:
-                                break
                         else:
                             # 如果没有等待中的future但生产者还活着，短暂休眠
                             if gen_thread.is_alive():
