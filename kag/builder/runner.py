@@ -12,7 +12,6 @@
 
 
 import os
-import time
 import traceback
 import logging
 import threading
@@ -368,67 +367,50 @@ class BuilderChainStreamRunner(BuilderChainRunner):
                 with tqdm(desc="Processing stream", position=0) as pbar:
                     while gen_thread.is_alive() or futures_map:
                         # Process any completed futures - 使用as_completed替代手动检查
-                        if futures_map:
-                            # 设置较短的超时时间，防止长时间阻塞
+                        done_futures = []
+                        for fut in list(futures_map.keys()):
+                            if fut.done():
+                                done_futures.append(fut)
+                        for fut in done_futures:
+                            # 从本地字典获取信息
+                            submitted_id, item_id, item_abstract = futures_map.pop(fut)
+                            # 处理结果
                             try:
                                 # 只处理已经完成的future，这比轮询更高效
-                                for fut in as_completed(
-                                    list(futures_map.keys()), timeout=0.5
-                                ):
-                                    # 从本地字典获取信息
-                                    (
-                                        submitted_id,
-                                        item_id,
-                                        item_abstract,
-                                    ) = futures_map.pop(fut)
+                                result = fut.result()
+                            except Exception:
+                                traceback.print_exc()
+                                continue
+                            if result is not None:
+                                item, item_id, item_abstract, chain_output = result
 
-                                    # 处理结果
-                                    try:
-                                        result = fut.result()
-                                    except Exception:
-                                        traceback.print_exc()
-                                        continue
+                                # Process the result and update checkpoints
+                                # num_nodes, num_edges, num_subgraphs = 0, 0, 0
+                                # for item in chain_output:
+                                #     if isinstance(item, SubGraph):
+                                #         num_nodes += len(item.nodes)
+                                #         num_edges += len(item.edges)
+                                #         num_subgraphs += 1
+                                #     elif isinstance(item, dict):
+                                #         for k, v in item.items():
+                                #             self.processed_chunks.write_to_ckpt(
+                                #                 k, k
+                                #             )
+                                #             if isinstance(v, SubGraph):
+                                #                 num_nodes += len(v.nodes)
+                                #                 num_edges += len(v.edges)
+                                #                 num_subgraphs += 1
 
-                                    if result is not None:
-                                        (
-                                            item,
-                                            item_id,
-                                            item_abstract,
-                                            chain_output,
-                                        ) = result
+                                success += 1
+                                pbar.update(1)
+                                pbar.set_description(
+                                    f"Processed: {success}/{submitted}"
+                                )
+                        # Small sleep to avoid busy-waiting
+                        if not done_futures:
+                            import time
 
-                                        # Process the result and update checkpoints
-                                        # num_nodes, num_edges, num_subgraphs = 0, 0, 0
-                                        # for item in chain_output:
-                                        #     if isinstance(item, SubGraph):
-                                        #         num_nodes += len(item.nodes)
-                                        #         num_edges += len(item.edges)
-                                        #         num_subgraphs += 1
-                                        #     elif isinstance(item, dict):
-                                        #         for k, v in item.items():
-                                        #             self.processed_chunks.write_to_ckpt(
-                                        #                 k, k
-                                        #             )
-                                        #             if isinstance(v, SubGraph):
-                                        #                 num_nodes += len(v.nodes)
-                                        #                 num_edges += len(v.edges)
-                                        #                 num_subgraphs += 1
-
-                                        success += 1
-                                        pbar.update(1)
-                                        pbar.set_description(
-                                            f"Processed: {success}/{submitted}"
-                                        )
-                            except TimeoutError:
-                                # 超时表示没有完成的任务，继续下一次循环
-                                pass
-
-                        else:
-                            # 如果没有等待中的future但生产者还活着，短暂休眠
-                            if gen_thread.is_alive():
-                                time.sleep(0.1)
-                            else:
-                                break  # 生产者结束且无待处理任务，退出循环
+                            time.sleep(0.1)
 
                 gen_thread.join()
 
