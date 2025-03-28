@@ -12,6 +12,7 @@
 
 
 import os
+import time
 import traceback
 import logging
 import threading
@@ -366,17 +367,10 @@ class BuilderChainStreamRunner(BuilderChainRunner):
                 # Process results as they complete
                 with tqdm(desc="Processing stream", position=0) as pbar:
                     while gen_thread.is_alive() or futures_map:
-                        # Process any completed futures - 使用as_completed替代手动检查
-                        done_futures = []
-                        for fut in list(futures_map.keys()):
-                            if fut.done():
-                                done_futures.append(fut)
-                        for fut in done_futures:
-                            # 从本地字典获取信息
+
+                        for fut in as_completed(list(futures_map.keys())):
                             submitted_id, item_id, item_abstract = futures_map.pop(fut)
-                            # 处理结果
                             try:
-                                # 只处理已经完成的future，这比轮询更高效
                                 result = fut.result()
                             except Exception:
                                 traceback.print_exc()
@@ -406,11 +400,6 @@ class BuilderChainStreamRunner(BuilderChainRunner):
                                 pbar.set_description(
                                     f"Processed: {success}/{submitted}"
                                 )
-                        # Small sleep to avoid busy-waiting
-                        if not done_futures:
-                            import time
-
-                            time.sleep(0.1)
 
                 gen_thread.join()
 
