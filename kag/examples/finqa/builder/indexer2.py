@@ -159,7 +159,9 @@ def _table_to_row_col_index_df(df, update_column=False):
     return new_df
 
 
-def get_table_data(file_name, prev, post, table_df: pd.DataFrame):
+def get_table_data(file_name, prev, post, table_df: pd.DataFrame, use_raw_table_df=False):
+    if use_raw_table_df:
+        return [f"{table_df.to_markdown(index=False)}"]
     tmp_df = _table_to_row_col_index_df(df=table_df)
     table_index_md = tmp_df.to_markdown(index=False)
     input_str = f"{prev}\n\n{table_index_md}\n\n{post}"
@@ -243,6 +245,7 @@ def convert_data(item, limitlen) -> list:
             prev_chunk_list[-1] if len(prev_chunk_list) > 0 else "",
             post_chunk_list[0] if len(post_chunk_list) > 0 else "",
             table_df=table_df,
+            use_raw_table_df=True,
         )
         + post_chunk_list
     )
@@ -266,7 +269,7 @@ def save_data(item, collection):
 
 if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    chromadb_path = os.path.join(current_dir, "chunk_chromadb")
+    chromadb_path = os.path.join(current_dir, "chunk_chromadb_raw_table")
     os.makedirs(chromadb_path, exist_ok=True)
     chroma_client = chromadb.PersistentClient(path=chromadb_path)
     collection = chroma_client.create_collection(name="chunk", get_or_create=True)

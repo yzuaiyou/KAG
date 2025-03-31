@@ -79,7 +79,7 @@ class FinQAChunkRetriever(KAGRetriever):
         )
 
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        chromadb_path = os.path.join(current_dir, "..", "builder", "chunk_chromadb")
+        chromadb_path = os.path.join(current_dir, "..", "builder", "chunk_chromadb_raw_table")
         os.makedirs(chromadb_path, exist_ok=True)
         chroma_client = chromadb.PersistentClient(path=chromadb_path)
         self.collection = chroma_client.create_collection(
