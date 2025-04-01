@@ -133,12 +133,17 @@ class FinQAReasoner(KagReasonerABC):
 
     def retrieval_examples(self, question, tags, topn=3):
         doc = question + " tags=" + str(tags)
-        rsts = self.collection.query(query_texts=[doc], n_results=topn)
+        rsts = self.collection.query(query_texts=[doc], n_results=topn+10)
         examples = []
-        for meta in rsts["metadatas"][0]:
+        for i, meta in enumerate(rsts["metadatas"][0]):
+            _id = rsts["ids"][0][i]
+            if _id.startswith("domain_knowledge"):
+                continue
             example = f"Question:{meta['question']}\nFormula:{meta['formula']}"
             examples.append(example)
             # examples.append(meta["example"])
+        if len(examples) > topn:
+            examples = examples[:topn]
         return examples
 
     def reason(
@@ -147,9 +152,9 @@ class FinQAReasoner(KagReasonerABC):
         memory: KagMemoryABC = None,
         **kwargs,
     ):
-        # tags = self.question_classify(question=question)
-        # examples = self.retrieval_examples(question=question, tags=tags, topn=5)
-        examples = json.loads(STATIC_EXAMPLE_STR)
+        tags = self.question_classify(question=question)
+        examples = self.retrieval_examples(question=question, tags=tags, topn=5)
+        #examples = json.loads(STATIC_EXAMPLE_STR)
         step_index = -1
         execute_rst_list = []
         process_info = {
