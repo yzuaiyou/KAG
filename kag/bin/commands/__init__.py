@@ -11,6 +11,6 @@
 # or implied.
 from kag.bin.commands.info import ListRegisterInfo
 from kag.bin.commands.builder import BuilderJobSubmit
+from kag.bin.commands.mcp_server import RunKagMcpServer
 
-
-__all__ = ["ListRegisterInfo", "BuilderJobSubmit"]
+__all__ = ["ListRegisterInfo", "BuilderJobSubmit", "RunKagMcpServer"]
