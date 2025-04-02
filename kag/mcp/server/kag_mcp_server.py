@@ -128,7 +128,7 @@ class KagMcpServer(object):
             }
             task = Task(executor=executor_name, arguments=executor_arguments)
             context = Context()
-            executor.invoke(query=query, task=task, context=context)
+            await executor.ainvoke(query=query, task=task, context=context)
             data = {
                 "summary": task.result.summary,
                 "references": task.result.to_reference_list(),
