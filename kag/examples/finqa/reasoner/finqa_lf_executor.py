@@ -161,9 +161,30 @@ class FinQACoderMathOp(OpExecutor):
         history: List[LFPlan],
         param: dict,
     ) -> Dict:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        ans, code = self.execute_with_retry(i=0, lf_plan=lf_plan, process_info=process_info)
+        lf_plan.res.debug_info = {
+            "code": code,
+            "rst": ans,
+            "error": "",
+        }
+        return {
+            "if_answered": False if "i don't know" in ans.lower() else True,
+            "answer": ans,
+        }
+
+    def executor_with_vote(
+        self,
+        nl_query: str,
+        lf_plan: LFPlan,
+        req_id: str,
+        kg_graph: KgGraph,
+        process_info: dict,
+        history: List[LFPlan],
+        param: dict,
+    ) -> Dict:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as _executor:
             futures = [
-                executor.submit(self.execute_with_retry, i, lf_plan, process_info)
+                _executor.submit(self.execute_with_retry, i, lf_plan, process_info)
                 for i in range(3)
             ]
             results = [
