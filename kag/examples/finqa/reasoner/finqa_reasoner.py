@@ -133,12 +133,12 @@ class FinQAReasoner(KagReasonerABC):
 
     def retrieval_examples(self, question, tags, topn=3):
         doc = question + " tags=" + str(tags)
-        rsts = self.collection.query(query_texts=[doc], n_results=topn+10)
+        rsts = self.collection.query(query_texts=[doc], n_results=topn)
         examples = []
-        for i, meta in enumerate(rsts["metadatas"][0]):
-            _id = rsts["ids"][0][i]
-            if _id.startswith("domain_knowledge"):
-                continue
+        for _, meta in enumerate(rsts["metadatas"][0]):
+            # _id = rsts["ids"][0][i]
+            # if _id.startswith("domain_knowledge"):
+            #     continue
             example = f"Question:{meta['question']}\nFormula:{meta['formula']}"
             examples.append(example)
             # examples.append(meta["example"])

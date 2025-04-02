@@ -151,7 +151,7 @@ class FinQACoderMathOp(OpExecutor):
             )
         return "I don't know", code
 
-    def executor(
+    def executor_with_out_vote(
         self,
         nl_query: str,
         lf_plan: LFPlan,
@@ -172,7 +172,7 @@ class FinQACoderMathOp(OpExecutor):
             "answer": ans,
         }
 
-    def executor_with_vote(
+    def executor(
         self,
         nl_query: str,
         lf_plan: LFPlan,
