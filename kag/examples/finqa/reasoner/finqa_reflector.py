@@ -61,7 +61,6 @@ class FinQAReflector(KagReflectorABC):
         :param instruction (str): The original instruction to be rewritten.
         :return: Whether the query can be answered (boolean)
         """
-        return True
         memory: FinQAMemory = memory
         recall_docs = get_all_recall_docs(memory.lf_res.execute_rst_list)
         if len(recall_docs) <= 0:

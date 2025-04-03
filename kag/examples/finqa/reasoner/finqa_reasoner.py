@@ -170,9 +170,9 @@ class FinQAReasoner(KagReasonerABC):
             step_index += 1
             if step_index >= 10:
                 break
+            # if 0 == step_index:
+            #     lf_nodes = self._create_lf_node(question=question, _type="retrieval")
             if 0 == step_index:
-                lf_nodes = self._create_lf_node(question=question, _type="retrieval")
-            elif 1 == step_index:
                 lf_nodes: List[LFPlan] = self.lf_planner.lf_planing(
                     question,
                     process_info=process_info,
