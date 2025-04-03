@@ -61,6 +61,7 @@ class FinQALFExecuteResult(LFExecuteResult):
             "code": code,
         }
 
+
 STATIC_EXAMPLE_STR = """
 [
   "Question:what portion for the trade and other accounts receivable is classified as part of the allowances for doubtful accounts?\\nFormula:Portion of Allowances for Doubtful Accounts = Allowances for Doubtful Accounts / Trade and Other Accounts Receivable",
@@ -70,6 +71,7 @@ STATIC_EXAMPLE_STR = """
   "Question:what is the percentage change in total trade net receivables?\\nFormula:Percentage Change = ((Total Trade Net Receivables in Year 2016 - Total Trade Net Receivables in Year 2015) / Total Trade Net Receivables in Year 2015) * 100"
 ]
 """
+
 
 @KagReasonerABC.register("finqa_reasoner", as_default=True)
 class FinQAReasoner(KagReasonerABC):
@@ -133,12 +135,12 @@ class FinQAReasoner(KagReasonerABC):
 
     def retrieval_examples(self, question, tags, topn=3):
         doc = question + " tags=" + str(tags)
-        rsts = self.collection.query(query_texts=[doc], n_results=topn)
+        rsts = self.collection.query(query_texts=[doc], n_results=topn + 5)
         examples = []
-        for _, meta in enumerate(rsts["metadatas"][0]):
-            # _id = rsts["ids"][0][i]
-            # if _id.startswith("domain_knowledge"):
-            #     continue
+        for i, meta in enumerate(rsts["metadatas"][0]):
+            _id = rsts["ids"][0][i]
+            if _id.startswith("domain_knowledge"):
+                continue
             example = f"Question:{meta['question']}\nFormula:{meta['formula']}"
             examples.append(example)
             # examples.append(meta["example"])
@@ -154,7 +156,7 @@ class FinQAReasoner(KagReasonerABC):
     ):
         tags = self.question_classify(question=question)
         examples = self.retrieval_examples(question=question, tags=tags, topn=5)
-        #examples = json.loads(STATIC_EXAMPLE_STR)
+        # examples = json.loads(STATIC_EXAMPLE_STR)
         step_index = -1
         execute_rst_list = []
         process_info = {

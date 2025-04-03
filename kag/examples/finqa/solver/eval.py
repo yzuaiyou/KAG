@@ -173,10 +173,10 @@ if __name__ == "__main__":
     }
     debug_index = None
 
-    if debug_index is None:
-        # 进行采样测试
-        test_count = 200
-        _finqa_data_list = random.sample(_finqa_data_list, test_count)
+    # if debug_index is None:
+    #     # 进行采样测试
+    #     test_count = 200
+    #     _finqa_data_list = random.sample(_finqa_data_list, test_count)
 
     error_question_map = {"error": [], "no_answer": [], "system_error": []}
     for _item in _finqa_data_list:
