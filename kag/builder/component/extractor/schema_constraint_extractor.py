@@ -36,6 +36,7 @@ class SchemaConstraintExtractor(ExtractorABC):
     """
     Perform knowledge extraction for enforcing schema constraints, including entities, events and their edges.
     The types of entities and events, along with their respective attributes, are automatically inherited from the project's schema.
+    主要用于执行知识提取以强制实施架构约束，包括实体、事件及其边缘。实体和事件的类型及其各自的属性会自动继承自项目的架构
     """
 
     def __init__(
@@ -56,7 +57,7 @@ class SchemaConstraintExtractor(ExtractorABC):
             std_prompt (PromptABC, optional): The prompt for named entity standardization. Defaults to None.
             relation_prompt (PromptABC, optional): The prompt for relation extraction. Defaults to None.
             event_prompt (PromptABC, optional): The prompt for event extraction. Defaults to None.
-            external_graph (ExternalGraphLoaderABC, optional): The external graph loader for additional data. Defaults to None.
+            external_graph (ExternalGraphLoaderABC, optional): The external graph loader for additional data. Defaults to None. 外部图加载器
         """
         super().__init__()
         self.llm = llm
@@ -85,6 +86,7 @@ class SchemaConstraintExtractor(ExtractorABC):
     def named_entity_recognition(self, passage: str):
         """
         Performs named entity recognition on a given text passage.
+        对给定文本段执行命名实体识别。
         Args:
             passage (str): The text to perform named entity recognition on.
         Returns:
@@ -126,6 +128,7 @@ class SchemaConstraintExtractor(ExtractorABC):
     def named_entity_standardization(self, passage: str, entities: List[Dict]):
         """
         Performs named entity standardization on a given text passage and entities.
+        对给定文本段和实体执行命名实体标准化。
 
         Args:
             passage (str): The text passage.
@@ -144,6 +147,7 @@ class SchemaConstraintExtractor(ExtractorABC):
     def relations_extraction(self, passage: str, entities: List[Dict]):
         """
         Performs relation extraction on a given text passage and entities.
+        对给定文本段和实体执行关系提取
 
         Args:
             passage (str): The text passage.
@@ -166,7 +170,7 @@ class SchemaConstraintExtractor(ExtractorABC):
     def event_extraction(self, passage: str):
         """
         Performs event extraction on a given text passage.
-
+        对给定文本段执行事件提取。
         Args:
             passage (str): The text passage.
 
@@ -181,7 +185,7 @@ class SchemaConstraintExtractor(ExtractorABC):
     def parse_nodes_and_edges(self, entities: List[Dict], category: str = None):
         """
         Parses nodes and edges from a list of entities.
-
+       从实体列表中解析节点和边。
         Args:
             entities (List[Dict]): The list of entities.
 
@@ -268,6 +272,7 @@ class SchemaConstraintExtractor(ExtractorABC):
     ):
         """
         Add edges to the subgraph based on a list of relations and entities.
+        基于关系和实体列表向子图添加边。
         Args:
             sub_graph (SubGraph): The subgraph to add edges to.
             entities (List[Dict]): A list of entities, for looking up category information.
@@ -325,7 +330,7 @@ class SchemaConstraintExtractor(ExtractorABC):
     ):
         """
         Assembles a subgraph from the given chunk, entities, events, and relations.
-
+        从给定的 Chunk、实体、事件和关系组装子图。
         Args:
             chunk (Chunk): The chunk object.
             entities (List[Dict]): The list of entities.
@@ -374,7 +379,7 @@ class SchemaConstraintExtractor(ExtractorABC):
     def postprocess_graph(self, graph):
         """
         Postprocesses the graph by merging nodes with the same name and label.
-
+        通过合并具有相同名称和标签的节点来后处理图。
         Args:
             graph (SubGraph): The graph to postprocess.
 
@@ -406,7 +411,7 @@ class SchemaConstraintExtractor(ExtractorABC):
     def _invoke(self, input: Input, **kwargs) -> List[Output]:
         """
         Invokes the extractor on the given input.
-
+        调用提取器处理给定输入。
         Args:
             input (Input): The input data.
             **kwargs: Additional keyword arguments.
