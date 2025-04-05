@@ -9,6 +9,34 @@
 # Unless required by applicable law or agreed to in writing, software distributed under the License
 # is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
 # or implied.
+# `SolverMain` 类用于处理和执行一个名为 `invoke` 的方法，该方法接收多个参数并运行一个解决方案管道 (`SolverPipeline`) 来处理查询，生成相应的回答，并记录报告。以下是对该类及其方法的详细解释：
+
+# ### 类 `SolverMain`
+# - **作用**：提供一个方法来处理特定项目和任务的查询，并生成相应的回答和报告。
+
+# ### 方法 `invoke`
+# - **输入参数**：
+#   - `project_id` (int): 项目ID
+#   - `task_id` (int): 任务ID
+#   - `query` (str): 需要处理的查询
+#   - `is_report` (bool, 默认值=True): 是否生成报告日志
+#   - `host_addr` (str, 默认值="http://127.0.0.1:8887"): 主机地址
+
+# - **功能**：
+#   1. **初始化报告工具**：创建一个 `ReporterIntermediateProcessTool` 对象，用于生成和记录报告。
+#   2. **配置LLM客户端**：从全局配置中获取LLM（大语言模型）客户端。
+#   3. **创建默认管道配置**：定义一个默认的解决方案管道配置。
+#   4. **加载管道配置**：从全局配置中获取或复制默认的管道配置。
+#   5. **运行管道**：使用 `SolverPipeline` 类从配置中创建一个管道实例，并运行该管道来处理查询。
+#   6. **处理结果**：如果运行成功，记录回答和日志；如果出现异常，生成错误消息并记录。
+#   7. **报告最终结果**：使用报告工具记录最终的回答和状态（完成或错误）。
+#   8. **返回结果**：返回生成的回答。
+
+# - **输出**：
+#   - 返回处理查询后的回答 (str)。
+
+# ### 示例解释
+# 这个方法的主要目的是处理传入的查询，并通过一系列的配置和工具生成一个回答，同时记录处理过程中的各种信息和日志。如果出现错误，它会生成一个相应的错误消息并记录下来。
 import copy
 import logging
 
