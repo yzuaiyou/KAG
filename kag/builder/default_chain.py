@@ -34,6 +34,8 @@ class DefaultStructuredBuilderChain(KAGBuilderChain):
     """
     A class representing a default SPG builder chain, used to import structured data based on schema definitions.
     It consists of a mapping component, a writer component, and an optional vectorizer component.
+    一个表示默认 SPG 构建器链的类，用于根据模式定义导入结构化数据。
+    它由一个映射组件、一个写入组件和一个可选的向量化组件组成
     """
 
     def __init__(
@@ -90,6 +92,8 @@ class DefaultUnstructuredBuilderChain(KAGBuilderChain):
     """
     A class representing a default unstructured builder chain, used to build a knowledge graph from unstructured text data such as txt and pdf files.
     It consists of a reader, splitter, extractor, vectorizer, optional post-processor, and writer components.
+    一个表示默认非结构化构建器链的类，用于从诸如 txt 和 pdf 文件之类的非结构化文本数据构建知识图谱。
+    它由读取器、拆分器、提取器、向量化器、可选的后处理器和写入器组件组成。
     """
 
     def __init__(
@@ -124,7 +128,7 @@ class DefaultUnstructuredBuilderChain(KAGBuilderChain):
 
     def invoke(self, input_data, max_workers=10, **kwargs):
         """
-        Invokes the builder chain to process the input file.
+        Invokes 调用 the builder chain to process the input file.
 
         Args:
             file_path: The path to the input file to be processed.
