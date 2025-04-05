@@ -5,7 +5,7 @@ from kag.common.registry import Registrable
 class ShardingInfo(Registrable):
     """
     A class representing sharding information for distributed computing.
-
+    ShardingInfo 类用于在分布式计算中管理和查询分片信息。它继承自 Registrable 类
     This class provides methods to manage and query sharding information across
     multiple machines, instances, and processes. It inherits from the `Registrable`
     class.
@@ -22,6 +22,18 @@ class ShardingInfo(Registrable):
         shard_by_machine (bool): Whether to shard by machine. Default is True.
         shard_by_instance (bool): Whether to shard by instance. Default is True.
         shard_by_process (bool): Whether to shard by process. Default is True.
+
+        machine_id (int): 当前机器的ID，默认值为0。
+        machine_count (int): 机器总数，默认值为1。
+        instance_id (int): 当前实例的ID，默认值为0。
+        instance_count (int): 实例总数，默认值为1。
+        process_id (int): 当前进程的ID，默认值为0。
+        process_count (int): 进程总数，默认值为1。
+        shard_id (int, optional): 当前分片的ID，默认值为None。
+        shard_count (int, optional): 分片总数，默认值为None。
+        shard_by_machine (bool): 是否按机器分片，默认值为True。
+       shard_by_instance (bool): 是否按实例分片，默认值为True。
+       shard_by_process (bool): 是否按进程分片，默认值为True。
     """
 
     def __init__(
@@ -67,6 +79,9 @@ class ShardingInfo(Registrable):
         """
         Configures the sharding strategy by specifying whether to shard by machine,
         instance, or process.
+
+        配置分片策略，通过指定是否按机器、实例或进程分片。
+
 
         Args:
             machine (bool): Whether to shard by machine. Default is True.
