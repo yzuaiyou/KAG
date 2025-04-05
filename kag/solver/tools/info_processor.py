@@ -18,6 +18,101 @@ from knext.reasoner.rest.reasoner_api import ReasonerApi
 
 logger = logging.getLogger(__name__)
 
+# `ReporterIntermediateProcessTool` 类用于在推理管道中报告中间过程。以下是该类的详细说明，包括其属性、构造函数和主要方法。
+
+# ### 类的作用
+# `ReporterIntermediateProcessTool` 类的主要作用是：
+# - 报告推理管道中的中间过程和节点状态。
+# - 管理节点的创建、状态更新以及报告整个管道的结构。
+
+# ### 类的属性
+# - `STATE (Enum)`: 枚举类，表示管道中节点的可能状态，包括 `WAITING`, `RUNNING`, `FINISH`, `ERROR`。
+# - `ROOT_ID (int)`: 根节点的 ID，初始值为 0。
+# - `report_log (bool)`: 是否报告日志。
+# - `task_id (str)`: 任务 ID。
+# - `project_id (str)`: 项目 ID。
+# - `client (ReasonerApi)`: 与推理器交互的 API 客户端。
+# - `cur_node_id (int)`: 当前节点的 ID。
+# - `last_sub_question_size (int)`: 上一个子问题列表的大小。
+# - `sub_query_node (list)`: 子查询节点的列表。
+# - `start_node_id (int)`: 起始节点的 ID。
+# - `create_pipeline_times (int)`: 创建管道的次数。
+# - `language (str)`: 输出消息的语言。
+
+# ### 构造函数
+# ```python
+# def __init__(self, report_log=False, task_id=None, project_id=None, host_addr=None, language="en"):
+# ```
+# - `report_log (bool)`: 是否报告日志。
+# - `task_id (str)`: 任务 ID。
+# - `project_id (str)`: 项目 ID。
+# - `host_addr (str)`: API 客户端的主机地址。
+# - `language (str)`: 输出消息的语言，默认为英文。
+
+# ### 方法
+# 1. `get_start_node_name()`
+#    - 功能：根据当前管道创建次数获取起始节点的名称。
+#    - 输出：起始节点的名称（字符串）。
+
+# 2. `get_end_node_name()`
+#    - 功能：获取结束节点的名称。
+#    - 输出：结束节点的名称（字符串）。
+
+# 3. `get_sub_question_name(index)`
+#    - 功能：获取子问题节点的名称。
+#    - 输入：子问题的索引（整数）。
+#    - 输出：子问题节点的名称（字符串）。
+
+# 4. `report_pipeline(question, rewrite_question_list=[])`
+#    - 功能：报告整个管道，包括节点和边。
+#    - 输入：
+#      - `question (str)`: 原始问题。
+#      - `rewrite_question_list (List[LFPlan])`: 重写问题的列表。
+
+# 5. `report_final_answer(query, answer, state)`
+#    - 功能：报告最终答案。
+#    - 输入：
+#      - `query (str)`: 查询。
+#      - `answer (str)`: 答案。
+#      - `state (STATE)`: 节点的状态。
+
+# 6. `report_node(req_id, index, state, node_plan, kg_graph)`
+#    - 功能：报告管道中的单个节点。
+#    - 输入：
+#      - `req_id (str)`: 请求 ID。
+#      - `index (int)`: 节点索引。
+#      - `state (STATE)`: 节点的状态。
+#      - `node_plan (LFPlan)`: 节点的逻辑形式计划。
+#      - `kg_graph (KgGraph)`: 与节点相关的知识图。
+
+# 7. `_convert_lf_res_to_report_format(req_id, index, state, res, kg_graph)`
+#    - 功能：将逻辑形式结果转换为报告格式。
+#    - 输入：
+#      - `req_id (str)`: 请求 ID。
+#      - `index (int)`: 节点索引。
+#      - `state (STATE)`: 节点的状态。
+#      - `res (SubQueryResult)`: 逻辑形式查询的结果。
+#      - `kg_graph (KgGraph)`: 与节点相关的知识图。
+#    - 输出：子答案、上下文内容和子图（元组）。
+
+# 8. `_convert_spo_to_graph(graph_id, spo_retrieved)`
+#    - 功能：将 SPO 三元组转换为图形表示。
+#    - 输入：
+#      - `graph_id (str)`: 图形 ID。
+#      - `spo_retrieved (list)`: 检索到的 SPO 三元组列表。
+#    - 输出：子图（SubGraph）。
+
+# 9. `_update_sub_question_recall_docs(docs)`
+#    - 功能：用检索到的文档更新子问题的上下文。
+#    - 输入：
+#      - `docs (list)`: 检索到的文档列表。
+#    - 输出：更新后的上下文内容（列表）。
+
+# 10. `format_logs(logs)`
+#     - 功能：将日志格式化为字符串。
+#     - 输入：
+#       - `logs (list or str)`: 要格式化的日志。
+#     - 输出：格式化的日志内容（字符串）。
 
 class ReporterIntermediateProcessTool:
     """
