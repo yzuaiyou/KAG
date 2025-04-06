@@ -19,7 +19,7 @@ from kag.common.utils import reset, bold, red, generate_hash_id
 class CheckPointer(Registrable):
     """
     A class for managing checkpoints in a distributed environment.
-
+    用于管理分布式环境中的检查点的类。它提供打开、读取、写入和关闭检查点文件的方法，设计用于在多个进程并行写入检查点的情况下处理检查点。
     This class provides methods to open, read, write, and close checkpoint files.
     It is designed to handle checkpoints in a distributed setting, where multiple
     processes may be writing checkpoints in parallel.
