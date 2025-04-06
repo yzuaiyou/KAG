@@ -73,7 +73,7 @@ def generate_hash_id_and_abstract(value):
 class BuilderChainRunner(Registrable):
     """
     A class that manages the execution of a KAGBuilderChain with parallel processing and checkpointing.
-
+    BuilderChainRunner 是一个管理 KAGBuilderChain 执行的类，具有并行处理和检查点管理的功能。
     This class provides methods to initialize the runner, process input data, and manage checkpoints for tracking processed data.
     """
 
