@@ -21,7 +21,8 @@ class ScannerABC(BuilderComponent, ABC):
     """
     Abstract base class for scanning  raw content from the source,
     typically used in conjunction with downstream parsers to obtain text suitable for knowledge extraction.
-
+    ScannerABC 是一个抽象基类，用于从源头扫描原始内容，通常与下游解析器结合使用以获取适合知识提取的文本。
+    它定义了读取输入源（如目录或CSV文件）的组件接口。该类继承自 BuilderComponent 和 ABC（抽象基类）。
     This class defines the interface for components that read input sources such as a directory or csv file.
     It inherits from `BuilderComponent` and `ABC` (Abstract Base Class).
 
